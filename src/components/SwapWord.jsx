@@ -1,31 +1,43 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Tooltip, Typography } from '@mui/material';
 import SwapOptions from './SwapOptions';
 
 function SwapWord({ children }) {
-  const [isBoxVisible, setIsBoxVisible] = useState(false);
+  const correctItem = "今日"; 
 
-  const handleSwapWordClick = () => {
-    setIsBoxVisible(!isBoxVisible);
+  const handleSuccess = (clickedItem) => {
+    const swapWordElement = document.getElementById('swap-word');
+    if (swapWordElement) {
+      swapWordElement.style.color = 'green'; // Change text color to green
+      setTimeout(() => {
+        swapWordElement.innerText = clickedItem; // Replace text with clicked item
+        swapWordElement.style.color = 'black'; // Change text color back to black
+      }, 500); // Adjust duration as needed
+    }
+  };
+
+  const handleFailure = () => {
+    const swapWordElement = document.getElementById('swap-word');
+    if (swapWordElement) {
+      swapWordElement.style.color = 'red'; // Change text color to red
+      setTimeout(() => {
+        swapWordElement.style.color = 'black'; // Change text color back to black
+      }, 500); // Adjust duration as needed
+    }
   };
 
   return (
     <Tooltip
-      open={isBoxVisible}
-      onClose={() => setIsBoxVisible(false)}
-      disableFocusListener
-      disableHoverListener
-      disableTouchListener
-      title={<SwapOptions />}
+      title={<SwapOptions handleSuccess={handleSuccess} handleFailure={handleFailure} correctItem={correctItem} />}
       PopperProps={{
-        disablePortal: true, // Render tooltip within the app component
-        style: { position: 'relative' }, // Ensure tooltip has relative positioning
+        disablePortal: true,
+        style: { position: 'relative' },
       }}
       placement="bottom"
       arrow
       interactive
     >
-      <Typography variant='h1' onClick={handleSwapWordClick}>{children}</Typography>
+      <Typography id="swap-word" variant='h1'>{children}</Typography>
     </Tooltip>
   );
 }
