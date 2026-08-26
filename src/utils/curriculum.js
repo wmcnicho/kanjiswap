@@ -27,11 +27,30 @@ export function exerciseTypeOf(section) {
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
-// The opening words of a passage, in kana, so repeated section names stay
-// distinguishable in the sidebar.
+// The opening words of a passage as the student sees them — kana, not kanji.
+//
+// `without_furigana` is the *kanji* text with the readings stripped, not the
+// kana text, so previewing it would print the answers in the sidebar. This
+// renders the passage the way the app does instead: readings in place of the
+// words still to be swapped.
 export function previewOf(passage) {
-  const text = (passage.without_furigana ?? '').replace(/\s+/g, '');
-  return text.length > PREVIEW_LENGTH ? `${text.slice(0, PREVIEW_LENGTH)}…` : text;
+  const line = parsePassage(passage.with_furigana ?? '')
+    .map((segments) => segments
+      .map((segment) => (segment.type === 'swap' ? segment.reading : segment.text))
+      .join('')
+      .replace(/\s+/g, ' ')
+      .trim())
+    .find(isMostlyJapanese) ?? '';
+
+  return line.length > PREVIEW_LENGTH ? `${line.slice(0, PREVIEW_LENGTH)}…` : line;
+}
+
+// Some passages open with an instruction from the textbook in English. Those
+// aren't the passage, so they aren't what the sidebar should show.
+function isMostlyJapanese(line) {
+  const japanese = (line.match(/[぀-ヿ一-鿿]/g) ?? []).length;
+  const latin = (line.match(/[A-Za-z]/g) ?? []).length;
+  return japanese > 0 && japanese >= latin;
 }
 
 export function wordCountOf(passage) {

@@ -15,9 +15,30 @@ test('normalizes the three spellings the extractor produces', () => {
   expect(exerciseTypeOf(spellings[0])).toBe('Reading Practice');
 });
 
-test('previews a passage by its opening kana', () => {
-  expect(previewOf({ without_furigana: 'わたしは にほんごを べんきょうします。' })).toBe('わたしはにほんごをべんきょう…');
-  expect(previewOf({ without_furigana: 'みじかい。' })).toBe('みじかい。');
+test('previews a passage as the student sees it, in kana', () => {
+  expect(previewOf({ with_furigana: '私(わたし)は本(ほん)を読(よ)む' })).toBe('わたしはほんをよむ');
+});
+
+test('never previews the kanji the student is meant to supply', () => {
+  // `without_furigana` is the kanji text, not the kana text — previewing it
+  // would print the answers in the sidebar.
+  const preview = previewOf({
+    with_furigana: '私(わたし)は本(ほん)を読(よ)む',
+    without_furigana: '私は本を読む',
+  });
+  expect(preview).not.toMatch(/私|本|読/);
+});
+
+test('skips a textbook instruction line written in English', () => {
+  const preview = previewOf({
+    with_furigana: 'The following sentences are identical to those above.\n私(わたし)は本(ほん)を読(よ)む',
+  });
+  expect(preview).toBe('わたしはほんをよむ');
+});
+
+test('truncates a long opening line', () => {
+  expect(previewOf({ with_furigana: '田(た)中(なか)先生(せんせい)は大学(だいがく)の先生(せんせい)です。' }))
+    .toBe('たなかせんせいはだいがくのせ…');
 });
 
 test('groups passages into chapters and keeps their original indices', () => {

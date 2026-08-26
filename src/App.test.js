@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import App from './App';
 import passages from './data/passages.json';
 import { parsePassage } from './utils/passage';
+import { previewOf } from './utils/curriculum';
 import {
   EVENT,
   STORAGE_KEY,
@@ -58,16 +59,28 @@ test('opens the chapter holding the passage on screen', () => {
 
 test('switching passages loads the one that was clicked', async () => {
   render(<App />);
-  const before = screen.getAllByText('わたし').length;
+  expect(screen.getAllByText('いちねんせい').length).toBeGreaterThan(0); // the first passage
 
-  const [, secondPassage] = screen.getAllByRole('button').filter((button) => /…/.test(button.textContent));
   act(() => {
-    userEvent.click(secondPassage);
+    // The nav renders twice — permanent drawer plus the keepMounted temporary
+    // one — so either copy will do.
+    userEvent.click(screen.getAllByText(previewOf(passages[1]))[0]);
   });
 
   await waitFor(() => {
-    expect(screen.queryAllByText('わたし').length).not.toBe(before);
+    expect(screen.getAllByText('だいがく').length).toBeGreaterThan(0); // the second
   });
+  expect(screen.queryAllByText('いちねんせい')).toHaveLength(0);
+});
+
+test('lists passages by what the student reads, not by the answers', () => {
+  render(<App />);
+
+  // `without_furigana` is the kanji text with readings stripped, so putting it
+  // in the rail would hand over the kanji the exercise is asking for.
+  const preview = screen.getAllByText(previewOf(passages[1]))[0];
+  expect(preview.textContent).not.toContain(passages[1].without_furigana.slice(0, 4));
+  expect(preview.textContent).toMatch(/^[ぁ-ゖー「」、。…]+$/);
 });
 
 test('renders the first passage with readings shown as hiragana', () => {
