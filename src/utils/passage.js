@@ -36,6 +36,11 @@ function parseLine(line) {
   return segments;
 }
 
+// Every swappable word in a parsed passage, in reading order.
+export function swapSegments(lines) {
+  return lines.flat().filter((segment) => segment.type === 'swap');
+}
+
 // Builds a shuffled option list for one swap word: the correct kanji plus
 // distractors drawn from the other kanji words in the same passage.
 export function buildSwapOptions(correctItem, passageWords, count = 3) {

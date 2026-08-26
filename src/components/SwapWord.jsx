@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { Tooltip, Typography } from '@mui/material';
 import SwapOptions from './SwapOptions';
 
-function SwapWord({ reading, correctItem, options, variant = 'h5' }) {
-  const [swappedItem, setSwappedItem] = useState(null);
+function SwapWord({ reading, correctItem, options, variant = 'h5', solved = false, onAttempt }) {
+  // A word solved in an earlier visit starts out already swapped, without the
+  // success flash — that animation belongs to the click that earned it.
+  const [swappedItem, setSwappedItem] = useState(solved ? correctItem : null);
   const [flash, setFlash] = useState(null); // 'success' | 'failure' | null
 
   const handleSuccess = (clickedItem) => {
+    onAttempt?.(true);
     setFlash('success'); // Change text color to green
     setTimeout(() => {
       setSwappedItem(clickedItem); // Replace text with clicked item
@@ -15,6 +18,7 @@ function SwapWord({ reading, correctItem, options, variant = 'h5' }) {
   };
 
   const handleFailure = () => {
+    onAttempt?.(false);
     setFlash('failure'); // Change text color to red
     setTimeout(() => {
       setFlash(null); // Change text color back to black
