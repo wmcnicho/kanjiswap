@@ -25,6 +25,8 @@ The app is hosted free on GitHub Pages at https://wmcnicho.github.io/kanjiswap. 
 
 React 18 + MUI v5 (Material UI with Emotion). Entry is `src/index.js` → `src/App.js`.
 
+`src/theme.js` builds the MUI theme around whichever Japanese face is selected (`FONTS`: Noto Sans JP, Klee One, Noto Serif JP, Zen Maru Gothic — loaded from Google Fonts in `public/index.html`, which serves them split by unicode range so only rendered glyphs download). The palette is deliberately quiet — paper ground, near-black text, one green and one red — so the passage is the only thing with visual weight. The selected font is a *setting event* in the log, not separate state.
+
 The flow: `App.js` renders a sidebar of the learning path plus the passage on screen, and owns the event log for every passage.
 
 - `src/utils/curriculum.js` — groups the flat passage list into the chapters the sidebar shows, and normalizes the section labels for display. The extracted data has three spellings of "Reading Practice (Sentences)" and puts Discourse Practice under two chapters; `exerciseTypeOf` canonicalizes them and `chapterOf` reads the leading number. **This is a display-side patch — the real fix belongs in the extractor in the j201 repo**, and this code costs nothing once that lands. `previewOf` takes the opening kana of a passage, which is what distinguishes ten passages sharing one section name.
@@ -35,6 +37,7 @@ The flow: `App.js` renders a sidebar of the learning path plus the passage on sc
 - `SwapPassage.jsx` — parses a passage once (memoized so options don't reshuffle), attaches each swap word's progress key, and renders text segments inline with `SwapWord`s.
 - `SwapWord.jsx` — shows a word's hiragana reading (dotted underline) wrapped in a MUI `Tooltip` of swap choices; state-driven flash green/replace-with-kanji on success, flash red on failure. Multiple instances coexist (state is per-component, no DOM ids). A word restored from saved progress renders as kanji immediately, with no flash. Reports every click up via `onAttempt`.
 - `SwapOptions.jsx` — the tooltip content: a grid of candidate kanji; clicking one validates against `correctItem` and calls the success/failure handler.
+- `ReadingControls.jsx` — the reading settings parked bottom-right at 45% opacity until hovered: currently the font picker, with each face naming itself in its own type.
 - `PassageNav.jsx` — the sidebar: chapters that collapse, each passage a progress bar over its opening kana. A tick means finished at least once; the bar tracks the attempt in progress, so it resets when the student tries again. Rendered into two MUI `Drawer`s — permanent from `md` up, temporary behind a ☰ button below it.
 - `PassageProgress.jsx` — the tally under a passage (solved/total, points, streak, wrong guesses) and, once the passage is finished, the **Try again** button and how it has gone before. Try again is deliberately absent mid-passage: it starts a fresh attempt rather than erasing anything, since the finished run stays in history.
 

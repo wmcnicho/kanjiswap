@@ -1,8 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Button, Divider, Drawer, Toolbar, Typography } from '@mui/material';
+import { Box, Button, CssBaseline, Divider, Drawer, Toolbar, Typography } from '@mui/material';
+import { ThemeProvider } from '@mui/material/styles';
 import SwapPassage from './components/SwapPassage';
 import PassageProgress from './components/PassageProgress';
 import PassageNav from './components/PassageNav';
+import ReadingControls from './components/ReadingControls';
+import { DEFAULT_FONT, buildTheme } from './theme';
 import passages from './data/passages.json';
 import { buildCurriculum, wordCountOf } from './utils/curriculum';
 import {
@@ -37,6 +40,15 @@ function App() {
   useEffect(() => {
     saveStore(store);
   }, [store]);
+
+  // Reading settings live in the same log as everything else, so when a student
+  // changed font is recorded alongside how they were doing at the time.
+  const fontId = state.settings.font ?? DEFAULT_FONT;
+  const theme = useMemo(() => buildTheme(fontId), [fontId]);
+
+  const changeSetting = (setting, value) => {
+    setStore((current) => appendEvent(current, EVENT.settingChanged, { setting, value }));
+  };
 
   const passage = passages[passageIndex];
   const passageId = passageKeys[passageIndex];
@@ -116,63 +128,68 @@ function App() {
   );
 
   return (
-    <Box display='flex' minHeight='100vh'>
-      <Box component='nav' sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}>
-        <Drawer
-          variant='temporary'
-          open={navOpen}
-          onClose={() => setNavOpen(false)}
-          ModalProps={{ keepMounted: true }}
-          sx={{
-            display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' },
-          }}
-        >
-          {navigation}
-        </Drawer>
-        <Drawer
-          variant='permanent'
-          open
-          sx={{
-            display: { xs: 'none', md: 'block' },
-            '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' },
-          }}
-        >
-          {navigation}
-        </Drawer>
-      </Box>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box display='flex' minHeight='100vh'>
+        <Box component='nav' sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}>
+          <Drawer
+            variant='temporary'
+            open={navOpen}
+            onClose={() => setNavOpen(false)}
+            ModalProps={{ keepMounted: true }}
+            sx={{
+              display: { xs: 'block', md: 'none' },
+              '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' },
+            }}
+          >
+            {navigation}
+          </Drawer>
+          <Drawer
+            variant='permanent'
+            open
+            sx={{
+              display: { xs: 'none', md: 'block' },
+              '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' },
+            }}
+          >
+            {navigation}
+          </Drawer>
+        </Box>
 
-      <Box
-        component='main'
-        flexGrow={1}
-        p={4}
-        display='flex'
-        flexDirection='column'
-        justifyContent='center'
-        alignItems='center'
-      >
-        <Button
-          onClick={() => setNavOpen(true)}
-          size='small'
-          sx={{ display: { md: 'none' }, alignSelf: 'flex-start', mb: 2 }}
+        <Box
+          component='main'
+          flexGrow={1}
+          p={4}
+          display='flex'
+          flexDirection='column'
+          justifyContent='center'
+          alignItems='center'
         >
-          ☰ Passages
-        </Button>
-        {/* Keyed by attempt so starting a fresh one clears the words on screen —
-            swap state is component-local and would otherwise survive the reset. */}
-        <SwapPassage
-          key={`${passageId}:${attempt?.attemptId ?? 'pending'}`}
-          passage={passage}
-          isSolved={(word) => isSolved(state, passageId, word)}
-          onAttempt={handleAttempt}
-        />
-        <PassageProgress
-          stats={passageStats(state, passageId, wordCount)}
-          totals={state.totals}
-          onTryAgain={startAttempt}
-        />
+          <Button
+            onClick={() => setNavOpen(true)}
+            size='small'
+            sx={{ display: { md: 'none' }, alignSelf: 'flex-start', mb: 2 }}
+          >
+            ☰ Passages
+          </Button>
+          {/* Keyed by attempt so starting a fresh one clears the words on screen —
+              swap state is component-local and would otherwise survive the reset. */}
+          <SwapPassage
+            key={`${passageId}:${attempt?.attemptId ?? 'pending'}`}
+            passage={passage}
+            isSolved={(word) => isSolved(state, passageId, word)}
+            onAttempt={handleAttempt}
+          />
+          <PassageProgress
+            stats={passageStats(state, passageId, wordCount)}
+            totals={state.totals}
+            onTryAgain={startAttempt}
+          />
+        </Box>
+
+        <ReadingControls font={fontId} onFontChange={(value) => changeSetting('font', value)} />
       </Box>
-    </Box>
+    </ThemeProvider>
   );
 }
 

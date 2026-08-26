@@ -177,3 +177,14 @@ test('exports the log for loading somewhere else later', () => {
   expect(exported.events).toHaveLength(2);
   expect(Date.parse(exported.exportedAt)).not.toBeNaN();
 });
+
+test('remembers reading settings, and when they changed', () => {
+  const store = log([EVENT.settingChanged, { setting: 'font', value: 'klee' }]);
+  expect(deriveState(store).settings.font).toBe('klee');
+  expect(Date.parse(store.events[0].at)).not.toBeNaN();
+});
+
+test('keeps settings out of the scoring fold', () => {
+  const state = deriveState(log(started, solvedFirstTry, [EVENT.settingChanged, { setting: 'font', value: 'klee' }]));
+  expect(state.totals.streak).toBe(1); // changing font doesn't break a streak
+});

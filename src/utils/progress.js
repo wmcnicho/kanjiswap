@@ -171,6 +171,7 @@ function emptyState() {
   return {
     passages: {},
     kanji: {},
+    settings: {},
     totals: {
       points: 0, solved: 0, misses: 0, firstTrySolves: 0,
       passagesCompleted: 0, streak: 0, bestStreak: 0,
@@ -190,8 +191,12 @@ function applyEvent(state, event) {
       return completeAttempt(state, event);
     case EVENT.attemptAbandoned:
       return archiveAttempt(state, event, 'abandoned');
+    case EVENT.settingChanged:
+      // Settings ride in the same log: when a student switched font or writing
+      // direction is worth knowing alongside how they were scoring at the time.
+      return { ...state, settings: { ...state.settings, [event.setting]: event.value } };
     default:
-      return state; // Settings and any future row types don't affect progress.
+      return state; // Unknown row types are kept in the log but ignored here.
   }
 }
 
