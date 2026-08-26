@@ -1,0 +1,48 @@
+import { buildCurriculum, chapterOf, exerciseTypeOf, previewOf } from './curriculum';
+
+test('reads the chapter number off a section label', () => {
+  expect(chapterOf('3: Discourse Practice (Reading)')).toBe(3);
+  expect(chapterOf('no number here')).toBeNull();
+});
+
+test('normalizes the three spellings the extractor produces', () => {
+  const spellings = [
+    '2: Reading practice (sentences)',
+    '2: Reading Practice (Sentences)',
+    '2: Reading Practices (Sentences)',
+  ];
+  expect(new Set(spellings.map(exerciseTypeOf)).size).toBe(1);
+  expect(exerciseTypeOf(spellings[0])).toBe('Reading Practice');
+});
+
+test('previews a passage by its opening kana', () => {
+  expect(previewOf({ without_furigana: 'わたしは にほんごを べんきょうします。' })).toBe('わたしはにほんごをべんきょう…');
+  expect(previewOf({ without_furigana: 'みじかい。' })).toBe('みじかい。');
+});
+
+test('groups passages into chapters and keeps their original indices', () => {
+  const chapters = buildCurriculum([
+    { section: '3: Discourse Practice (Reading)', with_furigana: '本(ほん)', without_furigana: 'ほん' },
+    { section: '2: Reading practice (sentences)', with_furigana: '私(わたし)', without_furigana: 'わたし' },
+    { section: '2: Reading Practice (Sentences)', with_furigana: '花(はな)', without_furigana: 'はな' },
+  ]);
+
+  expect(chapters.map((chapter) => chapter.chapter)).toEqual([2, 3]);
+  expect(chapters[0].passages.map((passage) => passage.index)).toEqual([1, 2]);
+  expect(chapters[0].label).toBe('Chapter 2 · Reading Practice');
+});
+
+test('labels a chapter with mixed exercise types by number alone', () => {
+  const [chapter] = buildCurriculum([
+    { section: '4: Discourse Practice (Reading)', with_furigana: '本(ほん)', without_furigana: 'ほん' },
+    { section: '4: Reading Practice (Sentences)', with_furigana: '私(わたし)', without_furigana: 'わたし' },
+  ]);
+  expect(chapter.label).toBe('Chapter 4');
+});
+
+test('counts the swappable words in a passage', () => {
+  const [chapter] = buildCurriculum([
+    { section: '2: Reading Practice', with_furigana: '私(わたし)は本(ほん)を読(よ)む', without_furigana: 'わたしはほんをよむ' },
+  ]);
+  expect(chapter.passages[0].wordCount).toBe(3);
+});

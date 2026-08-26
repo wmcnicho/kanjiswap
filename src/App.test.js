@@ -42,10 +42,32 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
-test('renders the passage picker', () => {
+test('lists the learning path as collapsible chapters', () => {
   render(<App />);
-  const select = screen.getByLabelText(/passage/i);
-  expect(select).toBeInTheDocument();
+  // Chapters 2, 3 and 4 all exist in the extracted data.
+  expect(screen.getAllByText(/Chapter 2/).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/Chapter 3/).length).toBeGreaterThan(0);
+});
+
+test('opens the chapter holding the passage on screen', () => {
+  render(<App />);
+  // The first passage's chapter starts expanded, so its preview is visible.
+  const [firstChapter] = screen.getAllByText(/Chapter 2/);
+  expect(firstChapter.textContent).toMatch(/▾/);
+});
+
+test('switching passages loads the one that was clicked', async () => {
+  render(<App />);
+  const before = screen.getAllByText('わたし').length;
+
+  const [, secondPassage] = screen.getAllByRole('button').filter((button) => /…/.test(button.textContent));
+  act(() => {
+    userEvent.click(secondPassage);
+  });
+
+  await waitFor(() => {
+    expect(screen.queryAllByText('わたし').length).not.toBe(before);
+  });
 });
 
 test('renders the first passage with readings shown as hiragana', () => {

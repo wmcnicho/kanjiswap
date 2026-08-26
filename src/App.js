@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
+import { Box, Button, Divider, Drawer, Toolbar, Typography } from '@mui/material';
 import SwapPassage from './components/SwapPassage';
 import PassageProgress from './components/PassageProgress';
+import PassageNav from './components/PassageNav';
 import passages from './data/passages.json';
-import { parsePassage, swapSegments } from './utils/passage';
+import { buildCurriculum, wordCountOf } from './utils/curriculum';
 import {
   EVENT,
   appendEvent,
@@ -17,13 +18,17 @@ import {
   saveStore,
 } from './utils/progress';
 
-// The passages are fixed at build time, so their keys and word counts are too.
+const DRAWER_WIDTH = 280;
+
+// The passages are fixed at build time, so the learning path and its keys are too.
+const chapters = buildCurriculum(passages);
 const passageKeys = passages.map(passageKey);
-const wordCounts = passages.map((item) => swapSegments(parsePassage(item.with_furigana)).length);
+const wordCounts = passages.map(wordCountOf);
 
 function App() {
   const [passageIndex, setPassageIndex] = useState(0);
   const [store, setStore] = useState(loadStore);
+  const [navOpen, setNavOpen] = useState(false);
 
   // Score, streaks, and what's solved are folded out of the event log rather
   // than stored, so a scoring change reprices old history instead of stranding it.
@@ -87,38 +92,86 @@ function App() {
       : appendEvent(current, EVENT.wordMissed, payload)));
   };
 
+  const handleSelect = (index) => {
+    setPassageIndex(index);
+    setNavOpen(false); // On a phone the nav is a temporary drawer over the text
+  };
+
+  const navigation = (
+    <>
+      <Toolbar sx={{ flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
+        <Typography variant='subtitle1' fontWeight={500}>KanjiSwap</Typography>
+        <Typography variant='caption' color='text.secondary'>
+          {state.totals.points} points · {state.totals.passagesCompleted} finished
+        </Typography>
+      </Toolbar>
+      <Divider />
+      <PassageNav
+        chapters={chapters}
+        selectedIndex={passageIndex}
+        statsFor={(item) => passageStats(state, passageKeys[item.index], item.wordCount)}
+        onSelect={handleSelect}
+      />
+    </>
+  );
+
   return (
-    <Box sx={{
-      minHeight: "500px"
-    }} display={'flex'} flexDirection={'column'} justifyContent={'center'} alignItems={'center'} p={4}>
-      <FormControl sx={{ minWidth: '300px', mb: 4 }}>
-        <InputLabel id="passage-select-label">Passage</InputLabel>
-        <Select
-          labelId="passage-select-label"
-          label="Passage"
-          value={passageIndex}
-          onChange={(event) => setPassageIndex(event.target.value)}
+    <Box display='flex' minHeight='100vh'>
+      <Box component='nav' sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}>
+        <Drawer
+          variant='temporary'
+          open={navOpen}
+          onClose={() => setNavOpen(false)}
+          ModalProps={{ keepMounted: true }}
+          sx={{
+            display: { xs: 'block', md: 'none' },
+            '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' },
+          }}
         >
-          {passages.map((item, index) => (
-            <MenuItem key={index} value={index}>
-              {index + 1}. {item.section}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-      {/* Keyed by attempt so starting a fresh one clears the words on screen —
-          swap state is component-local and would otherwise survive the reset. */}
-      <SwapPassage
-        key={`${passageId}:${attempt?.attemptId ?? 'pending'}`}
-        passage={passage}
-        isSolved={(word) => isSolved(state, passageId, word)}
-        onAttempt={handleAttempt}
-      />
-      <PassageProgress
-        stats={passageStats(state, passageId, wordCount)}
-        totals={state.totals}
-        onTryAgain={startAttempt}
-      />
+          {navigation}
+        </Drawer>
+        <Drawer
+          variant='permanent'
+          open
+          sx={{
+            display: { xs: 'none', md: 'block' },
+            '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' },
+          }}
+        >
+          {navigation}
+        </Drawer>
+      </Box>
+
+      <Box
+        component='main'
+        flexGrow={1}
+        p={4}
+        display='flex'
+        flexDirection='column'
+        justifyContent='center'
+        alignItems='center'
+      >
+        <Button
+          onClick={() => setNavOpen(true)}
+          size='small'
+          sx={{ display: { md: 'none' }, alignSelf: 'flex-start', mb: 2 }}
+        >
+          ☰ Passages
+        </Button>
+        {/* Keyed by attempt so starting a fresh one clears the words on screen —
+            swap state is component-local and would otherwise survive the reset. */}
+        <SwapPassage
+          key={`${passageId}:${attempt?.attemptId ?? 'pending'}`}
+          passage={passage}
+          isSolved={(word) => isSolved(state, passageId, word)}
+          onAttempt={handleAttempt}
+        />
+        <PassageProgress
+          stats={passageStats(state, passageId, wordCount)}
+          totals={state.totals}
+          onTryAgain={startAttempt}
+        />
+      </Box>
     </Box>
   );
 }
