@@ -44,6 +44,7 @@ function App() {
   // Reading settings live in the same log as everything else, so when a student
   // changed font is recorded alongside how they were doing at the time.
   const fontId = state.settings.font ?? DEFAULT_FONT;
+  const vertical = state.settings.writingMode === 'vertical';
   const theme = useMemo(() => buildTheme(fontId), [fontId]);
 
   const changeSetting = (setting, value) => {
@@ -177,7 +178,8 @@ function App() {
           <SwapPassage
             key={`${passageId}:${attempt?.attemptId ?? 'pending'}`}
             passage={passage}
-            isSolved={(word) => isSolved(state, passageId, word)}
+            vertical={vertical}
+          isSolved={(word) => isSolved(state, passageId, word)}
             onAttempt={handleAttempt}
           />
           <PassageProgress
@@ -187,7 +189,12 @@ function App() {
           />
         </Box>
 
-        <ReadingControls font={fontId} onFontChange={(value) => changeSetting('font', value)} />
+        <ReadingControls
+          font={fontId}
+          vertical={vertical}
+          onFontChange={(value) => changeSetting('font', value)}
+          onWritingModeChange={(next) => changeSetting('writingMode', next ? 'vertical' : 'horizontal')}
+        />
       </Box>
     </ThemeProvider>
   );

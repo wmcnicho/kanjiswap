@@ -23,3 +23,20 @@ test('reports the font the reader picked', () => {
 
   expect(onFontChange).toHaveBeenCalledWith(FONTS[1].id);
 });
+
+test('toggles the writing direction', () => {
+  const onWritingModeChange = jest.fn();
+  const { rerender } = render(
+    <ReadingControls font={FONTS[0].id} vertical={false} onFontChange={() => {}} onWritingModeChange={onWritingModeChange} />
+  );
+
+  const toggle = screen.getByLabelText(/writing direction/i);
+  expect(toggle).toHaveTextContent('縦'); // offers vertical while reading horizontally
+  fireEvent.click(toggle);
+  expect(onWritingModeChange).toHaveBeenCalledWith(true);
+
+  rerender(
+    <ReadingControls font={FONTS[0].id} vertical onFontChange={() => {}} onWritingModeChange={onWritingModeChange} />
+  );
+  expect(screen.getByLabelText(/writing direction/i)).toHaveTextContent('横');
+});

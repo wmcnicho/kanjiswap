@@ -81,10 +81,13 @@ test('restores words solved in an earlier visit', () => {
   const word = firstSwapWord();
   seedSolved(word);
 
-  render(<App />);
+  const { container } = render(<App />);
 
   expect(screen.getAllByText(word.kanji)[0]).toBeInTheDocument();
-  expect(screen.queryByText(word.reading)).not.toBeInTheDocument();
+  // The reading survives only as furigana, faded out — a restored word shows
+  // its kanji, not its kana.
+  const furigana = [...container.querySelectorAll('rt')].find((node) => node.textContent === word.reading);
+  expect(furigana).toHaveStyle({ opacity: '0' });
 });
 
 test('opens an attempt for a passage the student has never seen', async () => {
@@ -109,7 +112,7 @@ test('records a correct swap as a scored event', async () => {
 
   // The kanji replaces the kana after the success flash.
   await waitFor(() => {
-    expect(screen.queryByText(word.reading)).not.toBeInTheDocument();
+    expect(document.querySelector('ruby')).toHaveTextContent(word.kanji);
   });
 
   const store = loadStore();

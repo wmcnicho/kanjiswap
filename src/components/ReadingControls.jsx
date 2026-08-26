@@ -1,10 +1,10 @@
 import React from 'react';
-import { Box, MenuItem, Select } from '@mui/material';
+import { Box, MenuItem, Select, Tooltip } from '@mui/material';
 import { FONTS } from '../theme';
 
 // Reading settings, parked in the bottom corner: present when looked for,
 // quiet otherwise. Each font names itself in its own face.
-function ReadingControls({ font, onFontChange }) {
+function ReadingControls({ font, vertical, onFontChange, onWritingModeChange }) {
   return (
     <Box
       sx={{
@@ -19,6 +19,28 @@ function ReadingControls({ font, onFontChange }) {
         '&:hover, &:focus-within': { opacity: 1 },
       }}
     >
+      <Tooltip title={vertical ? 'Read left to right' : 'Read top to bottom'} placement='top'>
+        <Box
+          component='button'
+          type='button'
+          aria-label='Writing direction'
+          aria-pressed={vertical}
+          onClick={() => onWritingModeChange(!vertical)}
+          sx={{
+            font: 'inherit',
+            fontSize: '0.95rem',
+            lineHeight: 1,
+            color: 'text.secondary',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            p: 0.5,
+          }}
+        >
+          {vertical ? '横' : '縦'}
+        </Box>
+      </Tooltip>
+
       <Select
         value={font}
         onChange={(event) => onFontChange(event.target.value)}
