@@ -1,70 +1,57 @@
-# Getting Started with Create React App
+# KanjiSwap
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A prototype for practising kanji in context. Instead of drilling characters on
+flashcards, you read a short passage written entirely in hiragana and swap each
+word back to the kanji it should be written with.
 
-## Available Scripts
+**Try it:** https://wmcnicho.github.io/kanjiswap
 
-In the project directory, you can run:
+Words still waiting for their kanji are marked with a dotted underline. Click one
+to see a few candidate kanji, pick the right one, and it replaces the kana in
+place — green for a correct swap, red for a wrong guess.
 
-### `npm start`
+## The exercises
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+The 14 passages come from a real JAPA201 (Genki-style) textbook, extracted with
+the scripts in a companion repo. `src/data/passages.json` is that extractor's
+`j201_reading_passages.jsonl` output as a JSON array so Create React App can
+import it directly; regenerate it whenever the JSONL changes.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Each passage carries the text with inline furigana (`私(わたし)`), the same text
+without it, and the kanji/reading pairs in passage order. The app parses the
+furigana form to decide which words are swappable, and draws the wrong-answer
+choices from the other kanji words in the same passage — so distractors are
+always plausible for that text.
 
-### `npm test`
+The longer-term goal is to generate exercises dynamically rather than shipping a
+fixed set; the textbook passages are the reference format for what generated
+exercises should look like.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Running it locally
 
-### `npm run build`
+Requires Node 20 or newer.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```
+npm ci      # install exactly what the lockfile pins
+npm start   # dev server at http://localhost:3000
+npm test    # Jest in interactive watch mode
+npm run build
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+There is no separate lint step — ESLint (`react-app` config) runs as part of
+`npm start` and `npm run build`.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Deployment
 
-### `npm run eject`
+Every push to `main` runs the test suite and, if it passes, publishes the
+production build to GitHub Pages via `.github/workflows/deploy.yml`. Pull
+requests run the same tests and build without deploying.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+The `homepage` field in `package.json` is what makes the built asset paths work
+under the `/kanjiswap` project-page path; changing the repo name means changing
+that field too.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Stack
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+React 18 and MUI v5 (Material UI with Emotion) on Create React App. No backend —
+everything runs in the browser.
