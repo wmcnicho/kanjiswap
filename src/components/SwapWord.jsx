@@ -3,13 +3,13 @@ import { Tooltip, Typography } from '@mui/material';
 import SwapOptions from './SwapOptions';
 
 function SwapWord({ reading, correctItem, options, variant = 'h5', solved = false, onAttempt }) {
-  // A word solved in an earlier visit starts out already swapped, without the
-  // success flash — that animation belongs to the click that earned it.
+  // A word solved earlier in this attempt starts out already swapped, without
+  // the success flash — that animation belongs to the click that earned it.
   const [swappedItem, setSwappedItem] = useState(solved ? correctItem : null);
   const [flash, setFlash] = useState(null); // 'success' | 'failure' | null
 
   const handleSuccess = (clickedItem) => {
-    onAttempt?.(true);
+    onAttempt?.(true, clickedItem);
     setFlash('success'); // Change text color to green
     setTimeout(() => {
       setSwappedItem(clickedItem); // Replace text with clicked item
@@ -17,8 +17,8 @@ function SwapWord({ reading, correctItem, options, variant = 'h5', solved = fals
     }, 500); // Adjust duration as needed
   };
 
-  const handleFailure = () => {
-    onAttempt?.(false);
+  const handleFailure = (clickedItem) => {
+    onAttempt?.(false, clickedItem);
     setFlash('failure'); // Change text color to red
     setTimeout(() => {
       setFlash(null); // Change text color back to black

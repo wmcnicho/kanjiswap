@@ -3,7 +3,16 @@ import userEvent from '@testing-library/user-event';
 import App from './App';
 import passages from './data/passages.json';
 import { parsePassage } from './utils/passage';
-import { STORAGE_KEY, loadProgress, passageKey, wordKey } from './utils/progress';
+import {
+  EVENT,
+  STORAGE_KEY,
+  appendEvent,
+  createStore,
+  deriveState,
+  loadStore,
+  passageKey,
+  wordKey,
+} from './utils/progress';
 
 // The first swappable word of the first passage, which is what the app opens on.
 function firstSwapWord() {
@@ -16,6 +25,17 @@ function firstSwapWord() {
     }
   }
   throw new Error('the first passage has no swappable words');
+}
+
+// Seeds storage with a log in which that word was already solved.
+function seedSolved(word) {
+  const passageId = passageKey(passages[0]);
+  let store = appendEvent(createStore('install_test'), EVENT.attemptStarted, { passageId, attemptId: 'a1' });
+  store = appendEvent(store, EVENT.wordSolved, {
+    passageId, attemptId: 'a1', wordKey: word.key, kanji: word.kanji, firstTry: true,
+  });
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+  return passageId;
 }
 
 beforeEach(() => {
@@ -37,9 +57,7 @@ test('renders the first passage with readings shown as hiragana', () => {
 
 test('restores words solved in an earlier visit', () => {
   const word = firstSwapWord();
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
-    [passageKey(passages[0])]: { [word.key]: { solved: true, misses: 0 } },
-  }));
+  seedSolved(word);
 
   render(<App />);
 
@@ -47,7 +65,16 @@ test('restores words solved in an earlier visit', () => {
   expect(screen.queryByText(word.reading)).not.toBeInTheDocument();
 });
 
-test('saves a correct swap to browser storage', async () => {
+test('opens an attempt for a passage the student has never seen', async () => {
+  render(<App />);
+
+  await waitFor(() => {
+    const store = loadStore();
+    expect(store.events.some((event) => event.type === EVENT.attemptStarted)).toBe(true);
+  });
+});
+
+test('records a correct swap as a scored event', async () => {
   const word = firstSwapWord();
   render(<App />);
 
@@ -62,16 +89,18 @@ test('saves a correct swap to browser storage', async () => {
   await waitFor(() => {
     expect(screen.queryByText(word.reading)).not.toBeInTheDocument();
   });
-  expect(loadProgress()[passageKey(passages[0])]?.[word.key]).toEqual({ solved: true, misses: 0 });
+
+  const store = loadStore();
+  const solve = store.events.find((event) => event.type === EVENT.wordSolved);
+  expect(solve).toMatchObject({ wordKey: word.key, kanji: word.kanji, firstTry: true });
+  expect(deriveState(store).totals.points).toBeGreaterThan(0);
 });
 
-test('shows how much of a passage is done in the picker', () => {
+test('shows the running score', () => {
   const word = firstSwapWord();
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
-    [passageKey(passages[0])]: { [word.key]: { solved: true, misses: 0 } },
-  }));
+  seedSolved(word);
 
   render(<App />);
 
-  expect(screen.getByText(/1 \/ 1 swapped|1\/1 swapped|\(1\//)).toBeInTheDocument();
+  expect(screen.getByText(/points overall/)).toBeInTheDocument();
 });

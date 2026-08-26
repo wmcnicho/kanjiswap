@@ -1,23 +1,35 @@
 import React from 'react';
 import { Box, Button, Typography } from '@mui/material';
 
-// The running tally under a passage: how much is swapped, how many guesses went
-// wrong, and how often the first guess was right.
-function PassageProgress({ stats, onReset }) {
-  const { solved, total, misses, accuracy, complete } = stats;
-  const started = solved > 0 || misses > 0;
+// The tally under a passage. Mid-passage it reports what's left; once the
+// passage is finished it reports the run that just ended and offers another go.
+function PassageProgress({ stats, totals, onTryAgain }) {
+  const { solved, total, misses, points, complete, timesCompleted, bestPoints } = stats;
 
   return (
-    <Box display='flex' alignItems='center' gap={2} mt={3}>
+    <Box display='flex' flexDirection='column' alignItems='center' gap={1} mt={3}>
       <Typography variant='body2' color={complete ? 'success.main' : 'text.secondary'}>
-        {complete && 'Passage complete — '}
-        {solved}/{total} swapped
+        {complete ? `Passage complete — ${points} points` : `${solved}/${total} swapped · ${points} points`}
         {misses > 0 && ` · ${misses} wrong ${misses === 1 ? 'guess' : 'guesses'}`}
-        {accuracy !== null && ` · ${Math.round(accuracy * 100)}% accuracy`}
+        {totals.streak > 1 && ` · ${totals.streak} in a row`}
       </Typography>
-      <Button size='small' onClick={onReset} disabled={!started}>
-        Reset passage
-      </Button>
+
+      {complete && (
+        <>
+          <Button size='small' onClick={onTryAgain}>
+            Try again
+          </Button>
+          {timesCompleted > 1 && (
+            <Typography variant='caption' color='text.secondary'>
+              Finished {timesCompleted} times · best {bestPoints} points
+            </Typography>
+          )}
+        </>
+      )}
+
+      <Typography variant='caption' color='text.secondary'>
+        {totals.points} points overall · saved in this browser only
+      </Typography>
     </Box>
   );
 }

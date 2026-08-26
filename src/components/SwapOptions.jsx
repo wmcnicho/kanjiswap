@@ -7,7 +7,7 @@ function SwapOptions({ handleSuccess, handleFailure, correctItem, options }) {
     if (isValid) {
       handleSuccess(item);
     } else {
-      handleFailure();
+      handleFailure(item); // Which kanji tempted them is worth recording
     }
   };
 

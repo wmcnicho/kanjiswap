@@ -4,7 +4,7 @@ import SwapWord from './SwapWord';
 import { parsePassage, buildSwapOptions, swapSegments } from '../utils/passage';
 import { wordKey } from '../utils/progress';
 
-function SwapPassage({ passage, progress = {}, onAttempt }) {
+function SwapPassage({ passage, isSolved = () => false, onAttempt }) {
   // Parse once per passage, and attach a stable option list and progress key to
   // every swap segment so the choices don't reshuffle on re-render.
   const lines = useMemo(() => {
@@ -35,8 +35,8 @@ function SwapPassage({ passage, progress = {}, onAttempt }) {
                 correctItem={segment.kanji}
                 options={segment.options}
                 variant='h5'
-                solved={progress[segment.key]?.solved === true}
-                onAttempt={(correct) => onAttempt?.(segment.key, correct)}
+                solved={isSolved(segment.key)}
+                onAttempt={(correct, chosen) => onAttempt?.(segment, correct, chosen)}
               />
             ) : (
               <React.Fragment key={segmentIndex}>{segment.text}</React.Fragment>
