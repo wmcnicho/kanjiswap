@@ -15,14 +15,25 @@ export const KEY_TO_INDEX = Object.fromEntries([
 // around long enough to want them — the keys that pick each one.
 function SwapOptions({ options, onChoose, hintsVisible = false }) {
   return (
-    <Box color="primary.contrastText" p={1}>
-      <Grid container spacing={2}>
+    <Box color="primary.contrastText" p={{ xs: 0.5, md: 1 }}>
+      <Grid container spacing={{ xs: 1, md: 2 }}>
         {options.map((option, index) => (
           <Grid item xs={4} key={option}>
             <Box
-              p={1}
               data-option={option}
-              sx={{ cursor: 'pointer', whiteSpace: 'nowrap', textAlign: 'center' }}
+              sx={{
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                textAlign: 'center',
+                // A comfortable target for a fingertip, not just a cursor.
+                minWidth: { xs: 44, md: 'auto' },
+                minHeight: { xs: 44, md: 'auto' },
+                px: { xs: 1.5, md: 1 },
+                py: { xs: 1, md: 1 },
+                borderRadius: 1,
+                WebkitTapHighlightColor: 'transparent',
+                '&:active': { backgroundColor: 'rgba(255, 255, 255, 0.14)' },
+              }}
               onClick={() => onChoose(option)}
             >
               {option}

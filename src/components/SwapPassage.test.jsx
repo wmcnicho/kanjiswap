@@ -4,9 +4,14 @@ import { OPTION_KEYS } from './SwapOptions';
 
 const passage = { with_furigana: '私(わたし)は本(ほん)を読(よ)みます。\n花(はな)がすきです。' };
 
+// The choices currently *open*. A closed tooltip lingers in the DOM through its
+// exit transition, so presence isn't the same question as visibility: MUI points
+// the word at its tooltip with aria-labelledby only while it is open.
 function tooltipOptions() {
-  return [...document.querySelectorAll('.MuiTooltip-tooltip [data-option]')]
-    .map((cell) => cell.dataset.option);
+  return [...document.querySelectorAll('[aria-labelledby]')]
+    .map((word) => document.getElementById(word.getAttribute('aria-labelledby')))
+    .filter(Boolean)
+    .flatMap((tip) => [...tip.querySelectorAll('[data-option]')].map((cell) => cell.dataset.option));
 }
 
 // Presses the key that picks `kanji` out of the open choices.
@@ -25,6 +30,38 @@ test('runs top to bottom, right to left, when asked', () => {
   const { container } = render(<SwapPassage passage={passage} vertical />);
   // Block flow turns with the writing mode, so lines stack right to left.
   expect(container.firstChild).toHaveStyle({ writingMode: 'vertical-rl' });
+});
+
+describe('playing by touch', () => {
+  test('a tap opens the choices', () => {
+    render(<SwapPassage passage={passage} onAttempt={() => {}} />);
+    expect(tooltipOptions()).toHaveLength(0);
+
+    fireEvent.click(screen.getByText('わたし'));
+
+    // MUI only opens a tooltip on touch after a long press, which nobody would
+    // guess, so the word takes the tap itself.
+    expect(tooltipOptions()).toContain('私');
+  });
+
+  test('tapping the same word again puts the choices away', () => {
+    render(<SwapPassage passage={passage} onAttempt={() => {}} />);
+
+    fireEvent.click(screen.getByText('わたし'));
+    fireEvent.click(screen.getByText('わたし'));
+
+    expect(tooltipOptions()).toHaveLength(0);
+  });
+
+  test('a tapped choice answers the word', () => {
+    const onAttempt = jest.fn();
+    render(<SwapPassage passage={passage} onAttempt={onAttempt} />);
+
+    fireEvent.click(screen.getByText('わたし'));
+    fireEvent.click([...document.querySelectorAll('[data-option="私"]')].pop());
+
+    expect(onAttempt).toHaveBeenCalledWith(expect.objectContaining({ kanji: '私' }), true, '私');
+  });
 });
 
 describe('playing by keyboard', () => {

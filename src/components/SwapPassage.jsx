@@ -102,13 +102,15 @@ function SwapPassage({
   const layout = vertical
     ? {
         writingMode: 'vertical-rl',
+        // dvh rather than vh: a phone's address bar shouldn't crop the text.
         height: 'min(60vh, 520px)',
+        '@supports (height: 60dvh)': { height: 'min(60dvh, 520px)' },
         maxWidth: '100%',
         overflowX: 'auto',
         overflowY: 'hidden',
         px: 1,
       }
-    : { maxWidth: '700px' };
+    : { maxWidth: '700px', width: '100%' };
 
   return (
     <Box sx={layout}>

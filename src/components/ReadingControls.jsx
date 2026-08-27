@@ -9,14 +9,19 @@ function ReadingControls({ font, vertical, onFontChange, onWritingModeChange }) 
     <Box
       sx={{
         position: 'fixed',
-        right: 16,
-        bottom: 16,
+        right: 12,
+        // Clear of the home indicator on a phone, and of nothing on a desktop.
+        bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
         display: 'flex',
         alignItems: 'center',
         gap: 1,
         opacity: 0.45,
         transition: 'opacity 150ms',
+        backgroundColor: 'background.default',
+        borderRadius: 2,
         '&:hover, &:focus-within': { opacity: 1 },
+        // Nothing hovers on a phone, so the controls stay legible there.
+        '@media (pointer: coarse)': { opacity: 0.8 },
       }}
     >
       <Tooltip title={vertical ? 'Read left to right' : 'Read top to bottom'} placement='top'>
@@ -35,6 +40,9 @@ function ReadingControls({ font, vertical, onFontChange, onWritingModeChange }) 
             border: 'none',
             cursor: 'pointer',
             p: 0.5,
+            minWidth: 40,
+            minHeight: 40,
+            WebkitTapHighlightColor: 'transparent',
           }}
         >
           {vertical ? '横' : '縦'}

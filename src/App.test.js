@@ -43,6 +43,13 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
+test('keeps the mark and the score reachable when the rail is a drawer', () => {
+  render(<App />);
+  // The phone header carries what the hidden rail would otherwise hold.
+  expect(screen.getByRole('button', { name: 'Passages' })).toBeInTheDocument();
+  expect(screen.getAllByTestId('score-value').length).toBeGreaterThan(1);
+});
+
 test('shows the mark at the top of the rail', () => {
   render(<App />);
   expect(screen.getAllByRole('img', { name: /kanjiswap/i }).length).toBeGreaterThan(0);

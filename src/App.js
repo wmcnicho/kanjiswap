@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, Button, CssBaseline, Divider, Drawer, Toolbar, Typography } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import SwapPassage from './components/SwapPassage';
 import PassageProgress from './components/PassageProgress';
 import PassageNav from './components/PassageNav';
@@ -31,6 +32,8 @@ const passageKeys = passages.map(passageKey);
 const wordCounts = passages.map(wordCountOf);
 
 function App() {
+  // A phone has no keys to hint at, so it isn't offered any.
+  const touchOnly = useMediaQuery('(pointer: coarse)');
   const [passageIndex, setPassageIndex] = useState(0);
   const [store, setStore] = useState(loadStore);
   const [navOpen, setNavOpen] = useState(false);
@@ -48,7 +51,7 @@ function App() {
   const fontId = state.settings.font ?? DEFAULT_FONT;
   const vertical = state.settings.writingMode === 'vertical';
   // Once someone has been shown the option keys, they stay shown.
-  const hintsVisible = state.settings.keyHints === 'revealed';
+  const hintsVisible = state.settings.keyHints === 'revealed' && !touchOnly;
   const theme = useMemo(() => buildTheme(fontId), [fontId]);
 
   const revealHints = useCallback(() => {
@@ -145,7 +148,49 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box display='flex' minHeight='100vh'>
+      <Box
+        sx={{
+          minHeight: '100vh',
+          '@supports (min-height: 100dvh)': { minHeight: '100dvh' },
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {/* On a phone the rail is behind a drawer, so the mark and the running
+            score need somewhere else to live. */}
+        <Box
+          component='header'
+          sx={{
+            display: { xs: 'flex', md: 'none' },
+            position: 'sticky',
+            top: 0,
+            zIndex: (theme) => theme.zIndex.appBar,
+            alignItems: 'center',
+            gap: 1,
+            px: 1.5,
+            py: 1,
+            backgroundColor: 'background.default',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Button
+            onClick={() => setNavOpen(true)}
+            aria-label='Passages'
+            size='small'
+            sx={{ minWidth: 40, px: 1, fontSize: '1.1rem', lineHeight: 1 }}
+          >
+            ☰
+          </Button>
+          <KanjiMark size={24} />
+          <Typography variant='subtitle2' fontWeight={500}>KanjiSwap</Typography>
+          <Box flexGrow={1} />
+          <Typography variant='caption' color='text.secondary' component='div'>
+            <Score value={state.totals.points} label='points' />
+          </Typography>
+        </Box>
+
+      <Box display='flex' flexGrow={1}>
         <Box component='nav' sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}>
           <Drawer
             variant='temporary'
@@ -154,7 +199,8 @@ function App() {
             ModalProps={{ keepMounted: true }}
             sx={{
               display: { xs: 'block', md: 'none' },
-              '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' },
+              // A 280px rail on a 320px phone leaves no passage behind it.
+              '& .MuiDrawer-paper': { width: `min(${DRAWER_WIDTH}px, 85vw)`, boxSizing: 'border-box' },
             }}
           >
             {navigation}
@@ -174,19 +220,13 @@ function App() {
         <Box
           component='main'
           flexGrow={1}
-          p={4}
+          p={{ xs: 2, md: 4 }}
+          pb={{ xs: 9, md: 4 }} // room for the reading controls in the corner
           display='flex'
           flexDirection='column'
           justifyContent='center'
           alignItems='center'
         >
-          <Button
-            onClick={() => setNavOpen(true)}
-            size='small'
-            sx={{ display: { md: 'none' }, alignSelf: 'flex-start', mb: 2 }}
-          >
-            ☰ Passages
-          </Button>
           {/* Keyed by attempt so starting a fresh one clears the words on screen —
               swap state is component-local and would otherwise survive the reset. */}
           <SwapPassage
@@ -211,6 +251,7 @@ function App() {
           onFontChange={(value) => changeSetting('font', value)}
           onWritingModeChange={(next) => changeSetting('writingMode', next ? 'vertical' : 'horizontal')}
         />
+      </Box>
       </Box>
     </ThemeProvider>
   );

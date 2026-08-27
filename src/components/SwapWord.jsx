@@ -114,10 +114,16 @@ const SwapWord = forwardRef(function SwapWord({
       ref={wordRef}
       component='span'
       variant={variant}
+      // A tap has to open the choices. MUI only opens a tooltip on touch after
+      // a long press, which is not something anyone will guess.
+      onClick={() => (active ? onDeactivate?.() : onActivate?.())}
       sx={{
         color,
         cursor: 'pointer',
         borderBottom: '2px dotted', // Mark words still waiting for their kanji
+        // Keeps a finger from landing between two words on a phone.
+        py: 0.35,
+        WebkitTapHighlightColor: 'transparent',
         // The word the keyboard is aimed at, marked without shouting about it.
         backgroundColor: active ? 'rgba(0, 0, 0, 0.06)' : 'transparent',
         borderRadius: 1,
