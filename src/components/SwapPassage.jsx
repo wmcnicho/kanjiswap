@@ -8,6 +8,11 @@ import { wordKey } from '../utils/progress';
 // Long enough for the green flash to register before the next word opens.
 const ADVANCE_MS = 620;
 
+// A new passage shows its first word's choices on its own, once the reader has
+// had a moment to look at the text. Any move — hovering, tapping, a key —
+// brings them up immediately instead.
+const AUTO_OPEN_MS = 2000;
+
 // Stepping between words. Reading order runs left-to-right, or top-to-bottom
 // and then leftwards when the passage is set vertically, and the arrow keys
 // follow whichever is in force.
@@ -55,12 +60,25 @@ function SwapPassage({
   const usingKeyboard = useRef(false);
   const words = useRef({});
   const advance = useRef(null);
+  const autoOpen = useRef(null);
 
   const unsolved = order.filter((segment) => !isSolved(segment.key));
   const activeSegment = unsolved.find((segment) => segment.key === chosenKey) ?? unsolved[0] ?? null;
   const activeKey = activeSegment?.key ?? null;
 
   useEffect(() => () => clearTimeout(advance.current), []);
+
+  // App remounts this per passage and per attempt, so mounting is the moment a
+  // new exercise opens.
+  useEffect(() => {
+    autoOpen.current = setTimeout(() => setPlaying(true), AUTO_OPEN_MS);
+    return () => clearTimeout(autoOpen.current);
+  }, []);
+
+  const beginPlaying = useCallback(() => {
+    clearTimeout(autoOpen.current); // Beaten to it; don't fire again later
+    setPlaying(true);
+  }, []);
 
   // The next word still to be solved, continuing from this one and wrapping
   // round to anything skipped earlier.
@@ -111,12 +129,12 @@ function SwapPassage({
       onRevealHints?.();
 
       if (stepping !== 0) {
-        setPlaying(true);
+        beginPlaying();
         step(stepping);
         return;
       }
       if (!playing) {
-        setPlaying(true); // The first key press shows the choices rather than answering blind
+        beginPlaying(); // The first key press shows the choices rather than answering blind
         return;
       }
       const option = activeSegment.options[index];
@@ -127,7 +145,7 @@ function SwapPassage({
 
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [activeSegment, playing, step, vertical, onRevealHints]);
+  }, [activeSegment, playing, step, vertical, beginPlaying, onRevealHints]);
 
   // Vertical Japanese runs top-to-bottom, and successive lines stack to the
   // left — which `vertical-rl` gives for free, since block flow turns with the
@@ -166,12 +184,13 @@ function SwapPassage({
                 onAttempt={(correct, chosen) => handleAttempt(segment, correct, chosen)}
                 onActivate={() => {
                   setChosenKey(segment.key);
-                  setPlaying(true);
+                  beginPlaying();
                 }}
                 onDeactivate={() => {
                   // Once someone is playing by keyboard, moving the mouse away
                   // shouldn't close the word they're aiming at.
                   if (!usingKeyboard.current) {
+                    clearTimeout(autoOpen.current);
                     setPlaying(false);
                   }
                 }}

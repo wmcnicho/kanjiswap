@@ -1,5 +1,5 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Box, Tooltip, Typography } from '@mui/material';
+import { Box, Fade, Tooltip, Typography } from '@mui/material';
 import SwapOptions from './SwapOptions';
 
 const FLASH_MS = 500;          // How long the word colours before it swaps
@@ -143,6 +143,10 @@ const SwapWord = forwardRef(function SwapWord({
   return (
     <Tooltip
       open={active && choicesOpen}
+      // A fade rather than MUI's default grow: the choices arrive on their own
+      // a couple of seconds into a new passage, and shouldn't pounce.
+      TransitionComponent={Fade}
+      TransitionProps={{ timeout: 400 }}
       onOpen={() => onActivate?.()}
       onClose={() => onDeactivate?.()}
       title={<SwapOptions options={options} onChoose={choose} hintsVisible={hintsVisible} />}

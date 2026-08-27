@@ -43,15 +43,51 @@ describe('finding your place', () => {
     expect(activeWord()).toBe('わたし');
   });
 
-  test('marks it without opening choices over an untouched passage', () => {
-    render(<SwapPassage passage={passage} onAttempt={() => {}} />);
-    expect(tooltipOptions()).toHaveLength(0);
-  });
-
   test('marks the next unsolved word, not the next word', () => {
     const solved = new Set(['0.0.私']);
     render(<SwapPassage passage={passage} isSolved={(key) => solved.has(key)} onAttempt={() => {}} />);
     expect(activeWord()).toBe('ほん');
+  });
+});
+
+describe('opening a passage', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  test('holds the choices back for a moment, then shows them', () => {
+    render(<SwapPassage passage={passage} onAttempt={() => {}} />);
+    expect(tooltipOptions()).toHaveLength(0); // a moment to look at the text first
+
+    act(() => {
+      jest.advanceTimersByTime(2500);
+    });
+
+    expect(tooltipOptions()).toContain('私');
+  });
+
+  test('shows them straight away to anyone who moves first', () => {
+    render(<SwapPassage passage={passage} onAttempt={() => {}} />);
+
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+
+    expect(tooltipOptions()).toContain('本');
+  });
+
+  test('does not reopen choices the reader has just dismissed', () => {
+    render(<SwapPassage passage={passage} onAttempt={() => {}} />);
+
+    fireEvent.click(screen.getByText('わたし')); // open
+    fireEvent.click(screen.getByText('わたし')); // and put away again
+    act(() => {
+      jest.advanceTimersByTime(2500);
+    });
+
+    expect(tooltipOptions()).toHaveLength(0);
   });
 });
 
