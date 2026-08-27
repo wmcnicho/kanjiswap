@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, experimental/typed-reading]
   workflow_dispatch:
 
 # Allow the workflow to publish to Pages via OIDC.
@@ -16,29 +16,76 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+env:
+  EXPERIMENTAL_BRANCH: experimental/typed-reading
+
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
+      # A Pages deployment is a single artifact, so both builds are assembled
+      # here: main at the root, the experimental branch under /next.
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+
+      - uses: actions/checkout@v4
+        id: experimental
+        continue-on-error: true # The branch is allowed not to exist
+        with:
+          ref: ${{ env.EXPERIMENTAL_BRANCH }}
+          path: next
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: main/package-lock.json
 
-      - run: npm ci
+      - name: Install
+        working-directory: main
+        run: npm ci
 
-      - run: npm test -- --watchAll=false
+      - name: Run tests
+        working-directory: main
+        run: npm test -- --watchAll=false
 
-      - run: npm run build
+      # CI=true makes react-scripts treat lint warnings as build errors,
+      # which is the behaviour we want as a quality gate.
+      - name: Build
+        working-directory: main
+        run: npm run build
+
+      # Never blocks the release: unfinished work is the point of that branch.
+      - name: Build the experimental branch
+        if: steps.experimental.outcome == 'success'
+        continue-on-error: true
+        working-directory: next
+        env:
+          PUBLIC_URL: /kanjiswap/next
+          REACT_APP_TYPED_READING: 'on'
+        run: |
+          npm ci
+          npm run build
+
+      - name: Assemble the site
+        run: |
+          mkdir -p site
+          cp -r main/build/. site/
+          if [ -d next/build ]; then
+            cp -r next/build site/next
+            echo "published /next from $EXPERIMENTAL_BRANCH"
+          else
+            echo "no experimental build to publish"
+          fi
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: build
+          path: site
 
   deploy:
     name: Deploy

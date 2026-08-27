@@ -178,38 +178,72 @@ test('remembers that the option keys have been shown', async () => {
   });
 });
 
-test('offers both directions for every passage in the rail', () => {
+describe('with the reading exercise enabled', () => {
+  beforeEach(() => {
+    process.env.REACT_APP_TYPED_READING = 'on';
+  });
+
+  afterEach(() => {
+    delete process.env.REACT_APP_TYPED_READING;
+  });
+
+  test('offers both directions for every passage in the rail', () => {
   render(<App />);
   const { title } = titleOf(passages[0]);
 
-  // Two bars per passage: supply the kanji, and read it back.
-  expect(screen.getAllByLabelText(`${title} — Supply the kanji`).length).toBeGreaterThan(0);
-  expect(screen.getAllByLabelText(`${title} — Type the reading`).length).toBeGreaterThan(0);
+    // Two bars per passage: supply the kanji, and read it back.
+    expect(screen.getAllByLabelText(`${title} — Supply the kanji`).length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText(`${title} — Type the reading`).length).toBeGreaterThan(0);
+  });
+
+  test('switches the exercise round, and remembers which way it was', async () => {
+    render(<App />);
+    expect(screen.getAllByText(/かな → 漢字/).length).toBeGreaterThan(0);
+
+    act(() => {
+      userEvent.click(screen.getByLabelText(/exercise direction/i));
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/漢字 → かな/).length).toBeGreaterThan(0);
+    });
+    expect(deriveState(loadStore()).settings.direction).toBe('to_reading');
+  });
+
+  test('picking a bar opens that passage in that direction', async () => {
+    render(<App />);
+    const { title } = titleOf(passages[1]);
+
+    act(() => {
+      userEvent.click(screen.getAllByLabelText(`${title} — Type the reading`)[0]);
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/漢字 → かな/).length).toBeGreaterThan(0);
+    });
+  });
 });
 
-test('switches the exercise round, and remembers which way it was', async () => {
-  render(<App />);
-  expect(screen.getAllByText(/かな → 漢字/).length).toBeGreaterThan(0);
+describe('with the reading exercise disabled', () => {
+  test('offers only the direction that works', () => {
+    render(<App />);
+    const { title } = titleOf(passages[0]);
 
-  act(() => {
-    userEvent.click(screen.getByLabelText(/exercise direction/i));
+    expect(screen.getAllByLabelText(`${title} — Supply the kanji`).length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText(`${title} — Type the reading`)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/exercise direction/i)).not.toBeInTheDocument();
   });
 
-  await waitFor(() => {
-    expect(screen.getAllByText(/漢字 → かな/).length).toBeGreaterThan(0);
-  });
-  expect(deriveState(loadStore()).settings.direction).toBe('to_reading');
-});
+  test('ignores a saved setting asking for the unfinished one', () => {
+    const store = appendEvent(createStore('install_test'), EVENT.settingChanged, {
+      setting: 'direction', value: 'to_reading',
+    });
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
 
-test('picking a bar opens that passage in that direction', async () => {
-  render(<App />);
-  const { title } = titleOf(passages[1]);
+    render(<App />);
 
-  act(() => {
-    userEvent.click(screen.getAllByLabelText(`${title} — Type the reading`)[0]);
-  });
-
-  await waitFor(() => {
-    expect(screen.getAllByText(/漢字 → かな/).length).toBeGreaterThan(0);
+    // Someone who switched on a build that had it stays on the one that works.
+    expect(screen.getAllByText(/かな → 漢字/).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText(/漢字 → かな/)).toHaveLength(0);
   });
 });

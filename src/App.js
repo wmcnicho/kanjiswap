@@ -9,6 +9,7 @@ import ReadingControls from './components/ReadingControls';
 import KanjiMark from './components/KanjiMark';
 import Score from './components/Score';
 import { DEFAULT_FONT, buildTheme } from './theme';
+import { typedReadingEnabled } from './features';
 import passages from './data/passages.json';
 import { buildCurriculum, wordCountOf } from './utils/curriculum';
 import {
@@ -53,7 +54,11 @@ function App() {
   const fontId = state.settings.font ?? DEFAULT_FONT;
   const vertical = state.settings.writingMode === 'vertical';
   // Which way the exercise runs: supply the kanji, or read it and type the kana.
-  const direction = state.settings.direction === DIRECTION.toReading
+  // Typing the reading is unfinished, so a build that hasn't enabled it stays
+  // in the direction that works — including for anyone whose saved setting says
+  // otherwise.
+  const typedReading = typedReadingEnabled();
+  const direction = typedReading && state.settings.direction === DIRECTION.toReading
     ? DIRECTION.toReading
     : DIRECTION.toKanji;
   const typing = direction === DIRECTION.toReading;
@@ -154,6 +159,7 @@ function App() {
         selectedIndex={passageIndex}
         statsFor={(item, which) => passageStats(state, passageKeys[item.index], item.wordCount, which)}
         selectedDirection={direction}
+        directions={typedReading ? undefined : [DIRECTION.toKanji]}
         onSelect={handleSelect}
       />
     </>
@@ -293,7 +299,7 @@ function App() {
         <ReadingControls
           font={fontId}
           vertical={vertical}
-          direction={direction}
+          direction={typedReading ? direction : null}
           onDirectionChange={(value) => changeSetting('direction', value)}
           onFontChange={(value) => changeSetting('font', value)}
           onWritingModeChange={(next) => changeSetting('writingMode', next ? 'vertical' : 'horizontal')}

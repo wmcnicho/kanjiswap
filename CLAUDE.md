@@ -17,6 +17,14 @@ Standard Create React App (react-scripts 5):
 
 There is no separate lint command; ESLint (react-app config) runs as part of `npm start`/`npm run build`. On CI, `CI=true` makes those lint warnings fail the build, so keep the build warning-free.
 
+## Experimental features
+
+`src/features.js` gates unfinished work behind build flags, read at call time so a test can turn one on around the code it exercises. Nothing is on unless a build sets it.
+
+`REACT_APP_TYPED_READING` gates the 漢字 → かな exercise. **It is off on main**: typing doesn't work properly yet. With it off the direction toggle is absent, the rail shows one bar per passage, and a saved `direction` setting asking for the reading exercise is ignored rather than stranding someone in a broken mode.
+
+The Pages workflow publishes two builds from one deployment: `main` at `/`, and the branch named by `EXPERIMENTAL_BRANCH` (currently `experimental/typed-reading`) at **`/next`**, built with `PUBLIC_URL=/kanjiswap/next` and the flag on. That build is `continue-on-error` — unfinished work must never block the release — and the branch is allowed not to exist. Pushing to either branch rebuilds both.
+
 ## Two directions
 
 Every passage is two exercises, tracked separately:

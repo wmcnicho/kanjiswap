@@ -21,7 +21,9 @@ const BARS = [
 
 // The learning path: stages that collapse, the chapters within them, and each
 // passage showing how far through it the student is.
-function PassageNav({ stages, selectedIndex, selectedDirection, statsFor, onSelect }) {
+function PassageNav({ stages, selectedIndex, selectedDirection, statsFor, onSelect, directions }) {
+  // A build with the reading exercise turned off shows one bar, not two.
+  const bars = directions ? BARS.filter((bar) => directions.includes(bar.direction)) : BARS;
   const stageOfSelected = stages.find((stage) =>
     stage.passages.some((passage) => passage.index === selectedIndex)
   );
@@ -45,7 +47,7 @@ function PassageNav({ stages, selectedIndex, selectedDirection, statsFor, onSele
     <List dense disablePadding sx={{ py: 1 }}>
       {stages.map((stage) => {
         const open = openStages.has(stage.stage);
-        const done = stage.passages.filter((passage) => isFinishedBothWays(passage, statsFor)).length;
+        const done = stage.passages.filter((passage) => isFinishedEveryWay(passage, statsFor, bars)).length;
 
         return (
           <Box key={stage.stage} sx={{ mb: 0.5 }}>
@@ -70,7 +72,7 @@ function PassageNav({ stages, selectedIndex, selectedDirection, statsFor, onSele
                   </Typography>
 
                   {chapter.passages.map((passage) => {
-                    const bothWays = isFinishedBothWays(passage, statsFor);
+                    const bothWays = isFinishedEveryWay(passage, statsFor, bars);
                     return (
                       <Box key={passage.index} sx={{ pl: 3, pr: 2, py: 0.5 }}>
                         <ListItemButton
@@ -98,7 +100,7 @@ function PassageNav({ stages, selectedIndex, selectedDirection, statsFor, onSele
                           </Typography>
                         </ListItemButton>
 
-                        {BARS.map((bar) => {
+                        {bars.map((bar) => {
                           const stats = statsFor(passage, bar.direction);
                           const finished = isFinished(stats);
                           const current = passage.index === selectedIndex
@@ -160,9 +162,9 @@ function isFinished(stats) {
   return stats.complete || stats.timesCompleted > 0;
 }
 
-// The passage as a whole counts as done when it has been read both ways.
-function isFinishedBothWays(passage, statsFor) {
-  return BARS.every((bar) => isFinished(statsFor(passage, bar.direction)));
+// The passage as a whole counts as done when every direction on offer is.
+function isFinishedEveryWay(passage, statsFor, bars) {
+  return bars.every((bar) => isFinished(statsFor(passage, bar.direction)));
 }
 
 export default PassageNav;
