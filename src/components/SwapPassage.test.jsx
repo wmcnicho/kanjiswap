@@ -37,6 +37,45 @@ function activeWord() {
   return document.querySelector('[data-active]')?.textContent ?? null;
 }
 
+describe('reading the other way round', () => {
+  test('shows the kanji and asks for the reading instead of offering choices', () => {
+    render(<SwapPassage passage={passage} typing onAttempt={() => {}} />);
+
+    expect(screen.getByText('私')).toBeInTheDocument();
+    expect(screen.queryByText('わたし')).not.toBeInTheDocument();
+    expect(tooltipOptions()).toHaveLength(0);
+  });
+
+  test('aims at the first word, with somewhere to type', () => {
+    render(<SwapPassage passage={passage} typing onAttempt={() => {}} />);
+    expect(screen.getByLabelText(/reading for 私/i)).toBeInTheDocument();
+  });
+
+  test('leaves every key to the answer being typed', () => {
+    const onAttempt = jest.fn();
+    render(<SwapPassage passage={passage} typing onAttempt={onAttempt} />);
+
+    // 'a' picks an option in the other direction; here it is just a letter.
+    fireEvent.keyDown(window, { key: 'a' });
+
+    expect(onAttempt).not.toHaveBeenCalled();
+    expect(tooltipOptions()).toHaveLength(0);
+  });
+
+  test('moves on to the next word once one is read', () => {
+    jest.useFakeTimers();
+    render(<SwapPassage passage={passage} typing onAttempt={() => {}} />);
+
+    fireEvent.change(screen.getByLabelText(/reading for 私/i), { target: { value: 'watashi' } });
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(screen.getByLabelText(/reading for 本/i)).toBeInTheDocument();
+    jest.useRealTimers();
+  });
+});
+
 describe('finding your place', () => {
   test('the next word to solve is marked from the start', () => {
     render(<SwapPassage passage={passage} onAttempt={() => {}} />);

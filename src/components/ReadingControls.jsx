@@ -1,10 +1,12 @@
 import React from 'react';
 import { Box, MenuItem, Select, Tooltip } from '@mui/material';
 import { FONTS } from '../theme';
+import { DIRECTION } from '../utils/progress';
 
 // Reading settings, parked in the bottom corner: present when looked for,
 // quiet otherwise. Each font names itself in its own face.
-function ReadingControls({ font, vertical, onFontChange, onWritingModeChange }) {
+function ReadingControls({ font, vertical, direction, onFontChange, onWritingModeChange, onDirectionChange }) {
+  const typing = direction === DIRECTION.toReading;
   return (
     <Box
       sx={{
@@ -24,6 +26,33 @@ function ReadingControls({ font, vertical, onFontChange, onWritingModeChange }) 
         '@media (pointer: coarse)': { opacity: 0.8 },
       }}
     >
+      <Tooltip
+        title={typing ? 'Switch to supplying the kanji' : 'Switch to typing the reading'}
+        placement='top'
+      >
+        <Box
+          component='button'
+          type='button'
+          aria-label='Exercise direction'
+          onClick={() => onDirectionChange(typing ? DIRECTION.toKanji : DIRECTION.toReading)}
+          sx={{
+            font: 'inherit',
+            fontSize: '0.8rem',
+            lineHeight: 1,
+            color: 'text.secondary',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            p: 0.5,
+            minWidth: 40,
+            minHeight: 40,
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          {typing ? '漢→か' : 'か→漢'}
+        </Box>
+      </Tooltip>
+
       <Tooltip title={vertical ? 'Read left to right' : 'Read top to bottom'} placement='top'>
         <Box
           component='button'

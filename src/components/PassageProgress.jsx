@@ -1,14 +1,16 @@
 import React from 'react';
 import { Box, Button, Typography } from '@mui/material';
 import Score from './Score';
+import { DIRECTION } from '../utils/progress';
 
 // How the current passage is going. Lives beside the passage rather than under
 // it — a long passage pushes anything below it off the screen, which is exactly
 // when a student most wants to know where they are.
 //
 // `compact` is the phone version, which sits in the header bar.
-function PassageProgress({ stats, totals, onTryAgain, compact = false }) {
+function PassageProgress({ stats, totals, direction = DIRECTION.toKanji, onTryAgain, compact = false }) {
   const { solved, total, misses, points, complete, timesCompleted, bestPoints } = stats;
+  const typing = direction === DIRECTION.toReading;
 
   if (compact) {
     return (
@@ -32,11 +34,11 @@ function PassageProgress({ stats, totals, onTryAgain, compact = false }) {
   return (
     <Box display='flex' flexDirection='column' gap={0.75}>
       <Typography variant='caption' color='text.secondary' sx={{ letterSpacing: '0.1em' }}>
-        THIS PASSAGE
+        {typing ? '漢字 → かな' : 'かな → 漢字'}
       </Typography>
 
       <Typography variant='body2' color={complete ? 'success.main' : 'text.primary'} component='div'>
-        {complete ? 'Finished — ' : `${solved}/${total} swapped · `}
+        {complete ? 'Finished — ' : `${solved}/${total} ${typing ? 'read' : 'swapped'} · `}
         <Score value={points} label='points' showDelta />
       </Typography>
 

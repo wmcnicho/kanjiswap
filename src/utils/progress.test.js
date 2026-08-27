@@ -1,4 +1,5 @@
 import {
+  DIRECTION,
   EVENT,
   LEGACY_STORAGE_KEY,
   MAX_EVENTS,
@@ -187,4 +188,40 @@ test('remembers reading settings, and when they changed', () => {
 test('keeps settings out of the scoring fold', () => {
   const state = deriveState(log(started, solvedFirstTry, [EVENT.settingChanged, { setting: 'font', value: 'klee' }]));
   expect(state.totals.streak).toBe(1); // changing font doesn't break a streak
+});
+
+describe('the two directions', () => {
+  const readingStarted = [EVENT.attemptStarted, { passageId: 'p1', attemptId: 'r1', direction: DIRECTION.toReading }];
+  const readingSolved = [EVENT.wordSolved, {
+    passageId: 'p1', attemptId: 'r1', direction: DIRECTION.toReading, wordKey: 'w1', kanji: '私', firstTry: true,
+  }];
+
+  test('are counted apart: supplying a kanji is not reading it back', () => {
+    const state = deriveState(log(started, solvedFirstTry, readingStarted, readingSolved));
+
+    expect(passageStats(state, 'p1', 2, DIRECTION.toKanji)).toMatchObject({ solved: 1 });
+    expect(passageStats(state, 'p1', 2, DIRECTION.toReading)).toMatchObject({ solved: 1 });
+    expect(isSolved(state, 'p1', 'w1', DIRECTION.toKanji)).toBe(true);
+    expect(isSolved(state, 'p1', 'w2', DIRECTION.toReading)).toBe(false);
+  });
+
+  test('one can be finished while the other is untouched', () => {
+    const state = deriveState(log(readingStarted, readingSolved));
+
+    expect(passageStats(state, 'p1', 1, DIRECTION.toReading).complete).toBe(true);
+    expect(passageStats(state, 'p1', 1, DIRECTION.toKanji).complete).toBe(false);
+  });
+
+  test('both feed one score', () => {
+    const state = deriveState(log(started, solvedFirstTry, readingStarted, readingSolved));
+    expect(state.totals.solved).toBe(2);
+    expect(state.totals.points).toBeGreaterThan(0);
+  });
+
+  test('rows logged before the reading exercise existed count as kana-to-kanji', () => {
+    // `direction` was added later; the old rows carry none.
+    const state = deriveState(log(started, solvedFirstTry));
+    expect(passageStats(state, 'p1', 2, DIRECTION.toKanji).solved).toBe(1);
+    expect(passageStats(state, 'p1', 2, DIRECTION.toReading).solved).toBe(0);
+  });
 });

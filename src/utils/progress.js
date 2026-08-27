@@ -12,6 +12,13 @@ export const LEGACY_STORAGE_KEY = 'kanjiswap.progress.v1';
 // are dropped first and counted, so an export can say what it's missing.
 export const MAX_EVENTS = 5000;
 
+// Which way round the exercise runs. Rows carry it; anything logged before the
+// reading exercise existed is kana-to-kanji by definition.
+export const DIRECTION = {
+  toKanji: 'to_kanji',   // read the kana, supply the kanji
+  toReading: 'to_reading', // read the kanji, type the reading
+};
+
 export const EVENT = {
   attemptStarted: 'attempt_started',
   wordSolved: 'word_solved',
@@ -162,6 +169,9 @@ export function exportStore(store) {
 // --- Derived state -------------------------------------------------------
 // Folded fresh from the log on every change. Nothing here is persisted, so a
 // scoring change reprices existing history instead of leaving it stale.
+//
+// Each passage is tracked once per direction: finishing it kana-to-kanji says
+// nothing about whether you can read it the other way round.
 
 export function deriveState(store) {
   return (store?.events ?? []).reduce(applyEvent, emptyState());
@@ -177,6 +187,10 @@ function emptyState() {
       passagesCompleted: 0, streak: 0, bestStreak: 0,
     },
   };
+}
+
+function directionOf(event) {
+  return event.direction ?? DIRECTION.toKanji;
 }
 
 function applyEvent(state, event) {
@@ -200,25 +214,32 @@ function applyEvent(state, event) {
   }
 }
 
-function passageOf(state, passageId) {
-  return state.passages[passageId] ?? {
+function passageOf(state, passageId, direction) {
+  return state.passages[passageId]?.[direction] ?? {
     attempt: null, history: [], timesCompleted: 0, bestPoints: 0, lastPlayedAt: null,
   };
 }
 
-function withPassage(state, passageId, passage) {
-  return { ...state, passages: { ...state.passages, [passageId]: passage } };
+function withPassage(state, passageId, direction, passage) {
+  return {
+    ...state,
+    passages: {
+      ...state.passages,
+      [passageId]: { ...state.passages[passageId], [direction]: passage },
+    },
+  };
 }
 
 function startAttempt(state, event) {
-  const previous = passageOf(state, event.passageId);
+  const direction = directionOf(event);
+  const previous = passageOf(state, event.passageId, direction);
   // An attempt left open (the tab closed mid-passage) is archived rather than
   // silently replaced, so the log still shows it happened.
   const base = previous.attempt && !previous.attempt.completedAt
-    ? archiveAttempt(state, event, 'abandoned').passages[event.passageId]
+    ? passageOf(archiveAttempt(state, event, 'abandoned'), event.passageId, direction)
     : previous;
 
-  return withPassage(state, event.passageId, {
+  return withPassage(state, event.passageId, direction, {
     ...base,
     lastPlayedAt: event.at,
     attempt: {
@@ -235,7 +256,8 @@ function startAttempt(state, event) {
 }
 
 function solveWord(state, event) {
-  const passage = passageOf(state, event.passageId);
+  const direction = directionOf(event);
+  const passage = passageOf(state, event.passageId, direction);
   const attempt = passage.attempt ?? blankAttempt(event);
   const word = attempt.words[event.wordKey] ?? { solved: false, misses: 0 };
   const firstTry = event.firstTry === true;
@@ -243,7 +265,7 @@ function solveWord(state, event) {
   const streak = firstTry ? state.totals.streak + 1 : 0;
 
   return {
-    ...withPassage(state, event.passageId, {
+    ...withPassage(state, event.passageId, direction, {
       ...passage,
       lastPlayedAt: event.at,
       attempt: {
@@ -267,12 +289,13 @@ function solveWord(state, event) {
 }
 
 function missWord(state, event) {
-  const passage = passageOf(state, event.passageId);
+  const direction = directionOf(event);
+  const passage = passageOf(state, event.passageId, direction);
   const attempt = passage.attempt ?? blankAttempt(event);
   const word = attempt.words[event.wordKey] ?? { solved: false, misses: 0 };
 
   return {
-    ...withPassage(state, event.passageId, {
+    ...withPassage(state, event.passageId, direction, {
       ...passage,
       lastPlayedAt: event.at,
       attempt: {
@@ -287,14 +310,15 @@ function missWord(state, event) {
 }
 
 function completeAttempt(state, event) {
-  const passage = passageOf(state, event.passageId);
+  const direction = directionOf(event);
+  const passage = passageOf(state, event.passageId, direction);
   if (!passage.attempt) {
     return state;
   }
   const attempt = { ...passage.attempt, completedAt: event.at };
 
   return {
-    ...withPassage(state, event.passageId, {
+    ...withPassage(state, event.passageId, direction, {
       ...passage,
       attempt,
       history: [...passage.history, summarize(attempt, 'completed')],
@@ -306,11 +330,12 @@ function completeAttempt(state, event) {
 }
 
 function archiveAttempt(state, event, outcome) {
-  const passage = passageOf(state, event.passageId);
+  const direction = directionOf(event);
+  const passage = passageOf(state, event.passageId, direction);
   if (!passage.attempt || passage.attempt.completedAt) {
     return state;
   }
-  return withPassage(state, event.passageId, {
+  return withPassage(state, event.passageId, direction, {
     ...passage,
     attempt: null,
     history: [...passage.history, summarize(passage.attempt, outcome)],
@@ -354,8 +379,8 @@ function countKanji(kanji, character, field) {
 
 // --- Reading the derived state ------------------------------------------
 
-export function passageStats(state, passageId, totalWords) {
-  const passage = state.passages[passageId];
+export function passageStats(state, passageId, totalWords, direction = DIRECTION.toKanji) {
+  const passage = state.passages[passageId]?.[direction];
   const attempt = passage?.attempt;
   const solved = attempt?.solved ?? 0;
   return {
@@ -372,15 +397,14 @@ export function passageStats(state, passageId, totalWords) {
   };
 }
 
-export function isSolved(state, passageId, word) {
-  return state.passages[passageId]?.attempt?.words[word]?.solved === true;
+export function isSolved(state, passageId, word, direction = DIRECTION.toKanji) {
+  return state.passages[passageId]?.[direction]?.attempt?.words[word]?.solved === true;
 }
 
-export function missesFor(state, passageId, word) {
-  return state.passages[passageId]?.attempt?.words[word]?.misses ?? 0;
+export function missesFor(state, passageId, word, direction = DIRECTION.toKanji) {
+  return state.passages[passageId]?.[direction]?.attempt?.words[word]?.misses ?? 0;
 }
 
-export function currentAttemptId(state, passageId) {
-  const attempt = state.passages[passageId]?.attempt;
-  return attempt && !attempt.completedAt ? attempt.attemptId : null;
+export function currentAttempt(state, passageId, direction = DIRECTION.toKanji) {
+  return state.passages[passageId]?.[direction]?.attempt ?? null;
 }

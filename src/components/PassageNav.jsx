@@ -6,12 +6,22 @@ import {
   List,
   ListItemButton,
   ListItemText,
+  Tooltip,
   Typography,
 } from '@mui/material';
+import { DIRECTION } from '../utils/progress';
+
+// Each passage is two exercises, so it gets two bars. Labelled with the thing
+// you're being asked to produce: 漢 when you supply the kanji, か when you read
+// it back.
+const BARS = [
+  { direction: DIRECTION.toKanji, label: '漢', title: 'Supply the kanji' },
+  { direction: DIRECTION.toReading, label: 'か', title: 'Type the reading' },
+];
 
 // The learning path: stages that collapse, the chapters within them, and each
 // passage showing how far through it the student is.
-function PassageNav({ stages, selectedIndex, statsFor, onSelect }) {
+function PassageNav({ stages, selectedIndex, selectedDirection, statsFor, onSelect }) {
   const stageOfSelected = stages.find((stage) =>
     stage.passages.some((passage) => passage.index === selectedIndex)
   );
@@ -35,7 +45,7 @@ function PassageNav({ stages, selectedIndex, statsFor, onSelect }) {
     <List dense disablePadding sx={{ py: 1 }}>
       {stages.map((stage) => {
         const open = openStages.has(stage.stage);
-        const done = stage.passages.filter((passage) => isFinished(statsFor(passage))).length;
+        const done = stage.passages.filter((passage) => isFinishedBothWays(passage, statsFor)).length;
 
         return (
           <Box key={stage.stage} sx={{ mb: 0.5 }}>
@@ -60,40 +70,78 @@ function PassageNav({ stages, selectedIndex, statsFor, onSelect }) {
                   </Typography>
 
                   {chapter.passages.map((passage) => {
-                    const stats = statsFor(passage);
-                    const finished = isFinished(stats);
+                    const bothWays = isFinishedBothWays(passage, statsFor);
                     return (
-                      <ListItemButton
-                        key={passage.index}
-                        selected={passage.index === selectedIndex}
-                        onClick={() => onSelect(passage.index)}
-                        sx={{ pl: 3, py: 0.5, display: 'block' }}
-                      >
-                        <Typography
-                          variant='body2'
-                          noWrap
-                          color={finished ? 'success.main' : 'text.primary'}
+                      <Box key={passage.index} sx={{ pl: 3, pr: 2, py: 0.5 }}>
+                        <ListItemButton
+                          selected={passage.index === selectedIndex}
+                          onClick={() => onSelect(passage.index)}
+                          sx={{ px: 0.5, py: 0.25, borderRadius: 1 }}
                         >
-                          {passage.emoji && (
-                            <Box component='span' sx={{ mr: 0.75 }} aria-hidden='true'>{passage.emoji}</Box>
-                          )}
-                          <Box component='span'>{passage.title}</Box>
-                          {/* Named only when it breaks the pattern; saying
-                              "discourse practice" fourteen times says nothing. */}
-                          {passage.note && (
-                            <Box component='span' sx={{ color: 'text.secondary', fontSize: '0.75em', ml: 0.75 }}>
-                              {passage.note}
-                            </Box>
-                          )}
-                          {finished && <Box component='span' aria-label='finished'> ✓</Box>}
-                        </Typography>
-                        <LinearProgress
-                          variant='determinate'
-                          value={Math.round(stats.fraction * 100)}
-                          color={finished ? 'success' : 'primary'}
-                          sx={{ height: 4, borderRadius: 2, mt: 0.5 }}
-                        />
-                      </ListItemButton>
+                          <Typography
+                            variant='body2'
+                            noWrap
+                            color={bothWays ? 'success.main' : 'text.primary'}
+                          >
+                            {passage.emoji && (
+                              <Box component='span' sx={{ mr: 0.75 }} aria-hidden='true'>{passage.emoji}</Box>
+                            )}
+                            <Box component='span'>{passage.title}</Box>
+                            {/* Named only when it breaks the pattern; saying
+                                "discourse practice" fourteen times says nothing. */}
+                            {passage.note && (
+                              <Box component='span' sx={{ color: 'text.secondary', fontSize: '0.75em', ml: 0.75 }}>
+                                {passage.note}
+                              </Box>
+                            )}
+                            {bothWays && <Box component='span' aria-label='finished'> ✓</Box>}
+                          </Typography>
+                        </ListItemButton>
+
+                        {BARS.map((bar) => {
+                          const stats = statsFor(passage, bar.direction);
+                          const finished = isFinished(stats);
+                          const current = passage.index === selectedIndex
+                            && bar.direction === selectedDirection;
+                          return (
+                            <Tooltip key={bar.direction} title={bar.title} placement='right'>
+                              <Box
+                                component='button'
+                                type='button'
+                                aria-label={`${passage.title} — ${bar.title}`}
+                                onClick={() => onSelect(passage.index, bar.direction)}
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 0.75,
+                                  width: '100%',
+                                  px: 0.5,
+                                  py: 0.25,
+                                  border: 0,
+                                  background: 'none',
+                                  cursor: 'pointer',
+                                  opacity: current ? 1 : 0.55,
+                                  '&:hover': { opacity: 1 },
+                                }}
+                              >
+                                <Box
+                                  component='span'
+                                  aria-hidden='true'
+                                  sx={{ fontSize: '0.65rem', color: 'text.secondary', width: 12 }}
+                                >
+                                  {bar.label}
+                                </Box>
+                                <LinearProgress
+                                  variant='determinate'
+                                  value={Math.round(stats.fraction * 100)}
+                                  color={finished ? 'success' : 'primary'}
+                                  sx={{ height: 3, borderRadius: 2, flexGrow: 1 }}
+                                />
+                              </Box>
+                            </Tooltip>
+                          );
+                        })}
+                      </Box>
                     );
                   })}
                 </Box>
@@ -110,6 +158,11 @@ function PassageNav({ stages, selectedIndex, statsFor, onSelect }) {
 // attempt in progress, which starts over when the student tries again.
 function isFinished(stats) {
   return stats.complete || stats.timesCompleted > 0;
+}
+
+// The passage as a whole counts as done when it has been read both ways.
+function isFinishedBothWays(passage, statsFor) {
+  return BARS.every((bar) => isFinished(statsFor(passage, bar.direction)));
 }
 
 export default PassageNav;

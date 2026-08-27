@@ -17,6 +17,19 @@ Standard Create React App (react-scripts 5):
 
 There is no separate lint command; ESLint (react-app config) runs as part of `npm start`/`npm run build`. On CI, `CI=true` makes those lint warnings fail the build, so keep the build warning-free.
 
+## Two directions
+
+Every passage is two exercises, tracked separately:
+
+- **かな → 漢字** (`DIRECTION.toKanji`) — the original: read the kana, pick the kanji from a tooltip of choices.
+- **漢字 → かな** (`DIRECTION.toReading`) — the kanji is on the page and the reader types its reading into the furigana slot above it. A correct reading is recognised the moment it's complete — there's nothing to submit, since only one string can be right. `Enter` offers a wrong answer deliberately (that's what counts a miss); `Tab` walks to the next word.
+
+Every event row carries `direction`, and derived state keys each passage by it, so finishing one direction says nothing about the other. Rows logged before the reading exercise existed have no `direction` and count as `to_kanji`.
+
+`src/utils/kana.js` converts romaji to hiragana on every keystroke. Kana typed with an IME passes straight through — **that's the expected path**, since students are meant to have a kana keyboard; romaji is the fallback for anyone who hasn't. Conversion runs over the whole string each time rather than per keypress, which is what lets the two mix and half-typed syllables stay visible.
+
+The rail gives each passage two bars, labelled 漢 and か for what you're being asked to produce; clicking one opens that passage in that direction. A passage ticks as finished only when it's been read both ways.
+
 ## The mark
 
 The app icon and the mark in the sidebar are 漢字 caught mid-rotation inside a sweep arrow, black on paper. `tools/make_icon.py` generates everything from one definition: `public/icon.svg` (an SVG favicon that follows the reader's light/dark setting), `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, a multi-size `favicon.ico`, and `src/components/KanjiMark.jsx`.

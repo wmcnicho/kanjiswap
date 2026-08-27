@@ -12,6 +12,7 @@ import { DEFAULT_FONT, buildTheme } from './theme';
 import passages from './data/passages.json';
 import { buildCurriculum, wordCountOf } from './utils/curriculum';
 import {
+  DIRECTION,
   EVENT,
   appendEvent,
   deriveState,
@@ -20,6 +21,7 @@ import {
   missesFor,
   newId,
   passageKey,
+  currentAttempt,
   passageStats,
   saveStore,
 } from './utils/progress';
@@ -50,6 +52,11 @@ function App() {
   // changed font is recorded alongside how they were doing at the time.
   const fontId = state.settings.font ?? DEFAULT_FONT;
   const vertical = state.settings.writingMode === 'vertical';
+  // Which way the exercise runs: supply the kanji, or read it and type the kana.
+  const direction = state.settings.direction === DIRECTION.toReading
+    ? DIRECTION.toReading
+    : DIRECTION.toKanji;
+  const typing = direction === DIRECTION.toReading;
   // Once someone has been shown the option keys, they stay shown.
   const hintsVisible = state.settings.keyHints === 'revealed' && !touchOnly;
   const theme = useMemo(() => buildTheme(fontId), [fontId]);
@@ -67,16 +74,17 @@ function App() {
   const passage = passages[passageIndex];
   const passageId = passageKeys[passageIndex];
   const wordCount = wordCounts[passageIndex];
-  const attempt = state.passages[passageId]?.attempt ?? null;
+  const attempt = currentAttempt(state, passageId, direction);
 
   const startAttempt = useCallback(() => {
     setStore((current) => appendEvent(current, EVENT.attemptStarted, {
       passageId,
       attemptId: newId('attempt'),
+      direction,
       section: passage.section,
       wordCount,
     }));
-  }, [passageId, passage.section, wordCount]);
+  }, [passageId, passage.section, wordCount, direction]);
 
   // Opening a passage for the first time starts an attempt. A finished attempt
   // is left in place so its result stays on screen until "Try again".
@@ -92,6 +100,7 @@ function App() {
       setStore((current) => appendEvent(current, EVENT.attemptCompleted, {
         passageId,
         attemptId: attempt.attemptId,
+        direction,
         section: passage.section,
         wordCount,
         solved: attempt.solved,
@@ -100,26 +109,30 @@ function App() {
         points: attempt.points,
       }));
     }
-  }, [attempt, passageId, passage.section, wordCount]);
+  }, [attempt, passageId, passage.section, wordCount, direction]);
 
   const handleAttempt = (segment, correct, chosen) => {
     const payload = {
       passageId,
       attemptId: attempt?.attemptId ?? null,
+      direction,
       section: passage.section,
       wordKey: segment.key,
       kanji: segment.kanji,
       reading: segment.reading,
       chosen,
     };
-    const firstTry = missesFor(state, passageId, segment.key) === 0;
+    const firstTry = missesFor(state, passageId, segment.key, direction) === 0;
     setStore((current) => (correct
       ? appendEvent(current, EVENT.wordSolved, { ...payload, firstTry })
       : appendEvent(current, EVENT.wordMissed, payload)));
   };
 
-  const handleSelect = (index) => {
+  const handleSelect = (index, which) => {
     setPassageIndex(index);
+    if (which && which !== direction) {
+      changeSetting('direction', which);
+    }
     setNavOpen(false); // On a phone the nav is a temporary drawer over the text
   };
 
@@ -139,7 +152,8 @@ function App() {
       <PassageNav
         stages={stages}
         selectedIndex={passageIndex}
-        statsFor={(item) => passageStats(state, passageKeys[item.index], item.wordCount)}
+        statsFor={(item, which) => passageStats(state, passageKeys[item.index], item.wordCount, which)}
+        selectedDirection={direction}
         onSelect={handleSelect}
       />
     </>
@@ -187,7 +201,7 @@ function App() {
           <Box flexGrow={1} />
           <PassageProgress
             compact
-            stats={passageStats(state, passageId, wordCount)}
+            stats={passageStats(state, passageId, wordCount, direction)}
             totals={state.totals}
             onTryAgain={startAttempt}
           />
@@ -233,10 +247,11 @@ function App() {
               {/* Keyed by attempt so starting a fresh one clears the words on screen —
                   swap state is component-local and would otherwise survive the reset. */}
               <SwapPassage
-                key={`${passageId}:${attempt?.attemptId ?? 'pending'}`}
+                key={`${passageId}:${direction}:${attempt?.attemptId ?? 'pending'}`}
                 passage={passage}
                 vertical={vertical}
-                isSolved={(word) => isSolved(state, passageId, word)}
+                typing={typing}
+                isSolved={(word) => isSolved(state, passageId, word, direction)}
                 hintsVisible={hintsVisible}
                 onAttempt={handleAttempt}
                 onRevealHints={revealHints}
@@ -256,8 +271,9 @@ function App() {
               }}
             >
               <PassageProgress
-                stats={passageStats(state, passageId, wordCount)}
+                stats={passageStats(state, passageId, wordCount, direction)}
                 totals={state.totals}
+                direction={direction}
                 onTryAgain={startAttempt}
               />
             </Box>
@@ -277,6 +293,8 @@ function App() {
         <ReadingControls
           font={fontId}
           vertical={vertical}
+          direction={direction}
+          onDirectionChange={(value) => changeSetting('direction', value)}
           onFontChange={(value) => changeSetting('font', value)}
           onWritingModeChange={(next) => changeSetting('writingMode', next ? 'vertical' : 'horizontal')}
         />

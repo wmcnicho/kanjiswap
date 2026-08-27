@@ -159,7 +159,7 @@ test('keeps the score where a long passage cannot scroll it away', () => {
 
   // The rail, the phone header, and the panel beside the passage all carry it.
   expect(screen.getAllByTestId('score-value').length).toBeGreaterThan(1);
-  expect(screen.getAllByText(/THIS PASSAGE/).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/かな → 漢字/).length).toBeGreaterThan(0);
 });
 
 test('credits the textbook the passages come from', () => {
@@ -175,5 +175,41 @@ test('remembers that the option keys have been shown', async () => {
 
   await waitFor(() => {
     expect(deriveState(loadStore()).settings.keyHints).toBe('revealed');
+  });
+});
+
+test('offers both directions for every passage in the rail', () => {
+  render(<App />);
+  const { title } = titleOf(passages[0]);
+
+  // Two bars per passage: supply the kanji, and read it back.
+  expect(screen.getAllByLabelText(`${title} — Supply the kanji`).length).toBeGreaterThan(0);
+  expect(screen.getAllByLabelText(`${title} — Type the reading`).length).toBeGreaterThan(0);
+});
+
+test('switches the exercise round, and remembers which way it was', async () => {
+  render(<App />);
+  expect(screen.getAllByText(/かな → 漢字/).length).toBeGreaterThan(0);
+
+  act(() => {
+    userEvent.click(screen.getByLabelText(/exercise direction/i));
+  });
+
+  await waitFor(() => {
+    expect(screen.getAllByText(/漢字 → かな/).length).toBeGreaterThan(0);
+  });
+  expect(deriveState(loadStore()).settings.direction).toBe('to_reading');
+});
+
+test('picking a bar opens that passage in that direction', async () => {
+  render(<App />);
+  const { title } = titleOf(passages[1]);
+
+  act(() => {
+    userEvent.click(screen.getAllByLabelText(`${title} — Type the reading`)[0]);
+  });
+
+  await waitFor(() => {
+    expect(screen.getAllByText(/漢字 → かな/).length).toBeGreaterThan(0);
   });
 });

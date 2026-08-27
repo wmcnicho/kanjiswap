@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import SwapWord from './SwapWord';
+import TypeWord from './TypeWord';
 import { KEY_TO_INDEX } from './SwapOptions';
 import { parsePassage, buildSwapOptions, swapSegments } from '../utils/passage';
 import { wordKey } from '../utils/progress';
@@ -24,6 +25,7 @@ const STEP_KEYS = {
 function SwapPassage({
   passage,
   vertical = false,
+  typing = false, // kanji on the page, reading typed in — the other direction
   isSolved = () => false,
   hintsVisible = false,
   onAttempt,
@@ -71,9 +73,12 @@ function SwapPassage({
   // App remounts this per passage and per attempt, so mounting is the moment a
   // new exercise opens.
   useEffect(() => {
+    if (typing) {
+      return undefined; // Nothing to reveal: the reader types into the word itself
+    }
     autoOpen.current = setTimeout(() => setPlaying(true), AUTO_OPEN_MS);
     return () => clearTimeout(autoOpen.current);
-  }, []);
+  }, [typing]);
 
   const beginPlaying = useCallback(() => {
     clearTimeout(autoOpen.current); // Beaten to it; don't fire again later
@@ -109,6 +114,9 @@ function SwapPassage({
   };
 
   useEffect(() => {
+    if (typing) {
+      return undefined; // Every key belongs to the answer being typed
+    }
     const steps = STEP_KEYS[vertical ? 'vertical' : 'horizontal'];
 
     const handleKey = (event) => {
@@ -145,7 +153,7 @@ function SwapPassage({
 
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [activeSegment, playing, step, vertical, beginPlaying, onRevealHints]);
+  }, [activeSegment, playing, step, typing, vertical, beginPlaying, onRevealHints]);
 
   // Vertical Japanese runs top-to-bottom, and successive lines stack to the
   // left — which `vertical-rl` gives for free, since block flow turns with the
@@ -168,7 +176,22 @@ function SwapPassage({
       {lines.map((segments, lineIndex) => (
         <Typography key={lineIndex} variant='h5' sx={{ lineHeight: 2.5, minHeight: '1em' }}>
           {segments.map((segment, segmentIndex) =>
-            segment.type === 'swap' ? (
+            segment.type !== 'swap' ? (
+              <React.Fragment key={segmentIndex}>{segment.text}</React.Fragment>
+            ) : typing ? (
+              <TypeWord
+                key={segment.key}
+                ref={(handle) => { words.current[segment.key] = handle; }}
+                kanji={segment.kanji}
+                reading={segment.reading}
+                variant='h5'
+                solved={isSolved(segment.key)}
+                active={segment.key === activeKey}
+                onAttempt={(correct, answer) => handleAttempt(segment, correct, answer)}
+                onActivate={() => setChosenKey(segment.key)}
+                onStep={step}
+              />
+            ) : (
               <SwapWord
                 key={segment.key}
                 ref={(handle) => { words.current[segment.key] = handle; }}
@@ -196,8 +219,6 @@ function SwapPassage({
                 }}
                 onHintDelayElapsed={onRevealHints}
               />
-            ) : (
-              <React.Fragment key={segmentIndex}>{segment.text}</React.Fragment>
             )
           )}
         </Typography>
