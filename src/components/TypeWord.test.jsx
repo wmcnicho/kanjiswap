@@ -106,3 +106,92 @@ test('walks the passage with Tab rather than the page', () => {
   fireEvent.keyDown(input, { key: 'Tab', shiftKey: true });
   expect(onStep).toHaveBeenCalledWith(-1);
 });
+
+// What a Japanese IME does: keystrokes go into a composition, the text on
+// screen is provisional, and Enter commits it. jsdom fires none of this on its
+// own, so the events are dispatched the way a browser would.
+describe('typing with a Japanese IME', () => {
+  const input = () => screen.getByLabelText(/reading for 私/i);
+
+  function compose(text, { commitWith = 'compositionend' } = {}) {
+    fireEvent.compositionStart(input());
+    fireEvent.change(input(), { target: { value: text } });
+    if (commitWith === 'enter') {
+      // The Enter that commits the composition, which the browser marks.
+      fireEvent.keyDown(input(), { key: 'Enter', keyCode: 229 });
+    }
+    fireEvent.compositionEnd(input(), { target: { value: text } });
+  }
+
+  test('accepts a reading committed from a composition', () => {
+    const onAttempt = jest.fn();
+    render(<TypeWord {...word} active onAttempt={onAttempt} />);
+
+    compose('わたし');
+
+    expect(onAttempt).toHaveBeenCalledWith(true, 'わたし');
+  });
+
+  test('does not count the Enter that commits the composition as an answer', () => {
+    const onAttempt = jest.fn();
+    render(<TypeWord {...word} active onAttempt={onAttempt} />);
+
+    compose('わたし', { commitWith: 'enter' });
+
+    // That Enter finished the word; reading it as "I offer this" marked the
+    // reader wrong at the moment they got it right.
+    expect(onAttempt).not.toHaveBeenCalledWith(false, expect.anything());
+    expect(onAttempt).toHaveBeenCalledWith(true, 'わたし');
+  });
+
+  test('leaves the text alone while the composition is still open', () => {
+    render(<TypeWord {...word} active onAttempt={() => {}} />);
+
+    fireEvent.compositionStart(input());
+    fireEvent.change(input(), { target: { value: 'わた' } });
+
+    // Untouched: rewriting it here resets the IME's own buffer.
+    expect(input()).toHaveValue('わた');
+  });
+
+  test('still offers a wrong answer on a plain Enter', () => {
+    const onAttempt = jest.fn();
+    render(<TypeWord {...word} active onAttempt={onAttempt} />);
+
+    compose('わたく');
+    fireEvent.keyDown(input(), { key: 'Enter' });
+
+    expect(onAttempt).toHaveBeenCalledWith(false, 'わたく');
+  });
+});
+
+test('accepts the reading of a longer word typed as romaji', () => {
+  const onAttempt = jest.fn();
+  render(<TypeWord kanji='一年生' reading='いちねんせい' active onAttempt={onAttempt} />);
+
+  fireEvent.change(screen.getByLabelText(/reading for 一年生/i), { target: { value: 'ichinensei' } });
+
+  expect(onAttempt).toHaveBeenCalledWith(true, 'いちねんせい');
+});
+
+test('accepts nn for ん, which is how it is typed', () => {
+  const onAttempt = jest.fn();
+  render(<TypeWord kanji='一年生' reading='いちねんせい' active onAttempt={onAttempt} />);
+
+  fireEvent.change(screen.getByLabelText(/reading for 一年生/i), { target: { value: 'ichinennsei' } });
+
+  expect(onAttempt).toHaveBeenCalledWith(true, 'いちねんせい');
+});
+
+test('takes what was typed when the reader moves on without committing it', () => {
+  const onAttempt = jest.fn();
+  render(<TypeWord {...word} active onAttempt={onAttempt} />);
+  const field = screen.getByLabelText(/reading for 私/i);
+
+  fireEvent.compositionStart(field);
+  fireEvent.change(field, { target: { value: 'わたし' } });
+  fireEvent.blur(field, { target: { value: 'わたし' } });
+
+  // Typed correctly but never committed; losing it silently is the worst answer.
+  expect(onAttempt).toHaveBeenCalledWith(true, 'わたし');
+});

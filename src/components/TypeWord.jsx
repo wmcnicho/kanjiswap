@@ -27,6 +27,9 @@ const TypeWord = forwardRef(function TypeWord({
   const timers = useRef([]);
   const inputRef = useRef(null);
   const wordRef = useRef(null);
+  // True between compositionstart and compositionend — i.e. while a Japanese
+  // IME is mid-word and the text on screen isn't committed yet.
+  const composing = useRef(false);
 
   const later = (callback, delay) => {
     timers.current.push(setTimeout(callback, delay));
@@ -62,20 +65,53 @@ const TypeWord = forwardRef(function TypeWord({
     }, FLASH_MS);
   };
 
-  const handleChange = (event) => {
-    if (answered) {
-      return;
-    }
-    // Converting the whole string each time is what lets romaji and kana mix:
-    // kana passes through, and half-typed romaji stays visible.
-    const kana = toKana(event.target.value);
+  // Converting the whole string each time is what lets romaji and kana mix:
+  // kana passes through, and half-typed romaji stays visible.
+  const consider = (text) => {
+    const kana = toKana(text);
     setTyped(kana);
     if (kana === reading) {
       succeed();
     }
   };
 
+  const handleChange = (event) => {
+    if (answered) {
+      return;
+    }
+    if (composing.current) {
+      // Mid-composition the text belongs to the IME, not to us. Rewriting it
+      // here resets the IME's own buffer and mangles what the reader typed.
+      setTyped(event.target.value);
+      return;
+    }
+    consider(event.target.value);
+  };
+
+  const handleCompositionEnd = (event) => {
+    composing.current = false;
+    if (!answered) {
+      consider(event.target.value);
+    }
+  };
+
+  // Leaving the word — clicking another, or stepping away — commits whatever is
+  // in it. Otherwise a reading typed correctly but never committed is simply
+  // lost, and the reader is told nothing.
+  const handleBlur = (event) => {
+    composing.current = false;
+    if (!answered && event.target.value.length > 0) {
+      consider(event.target.value);
+    }
+  };
+
   const handleKeyDown = (event) => {
+    // An IME owns Enter — it's how a composition is committed — and reports so
+    // through isComposing. Treating that Enter as an answer marks the word
+    // wrong at the exact moment the reader finishes typing it correctly.
+    if (event.nativeEvent?.isComposing || event.keyCode === 229) {
+      return;
+    }
     if (event.key === 'Tab') {
       event.preventDefault(); // Tab walks the passage, not the page
       onStep?.(event.shiftKey ? -1 : 1);
@@ -154,6 +190,9 @@ const TypeWord = forwardRef(function TypeWord({
           value={typed}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
+          onCompositionStart={() => { composing.current = true; }}
+          onCompositionEnd={handleCompositionEnd}
+          onBlur={handleBlur}
           aria-label={`Reading for ${kanji}`}
           autoComplete='off'
           autoCapitalize='off'
