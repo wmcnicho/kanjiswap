@@ -52,7 +52,7 @@ The app is hosted free on GitHub Pages at https://wmcnicho.github.io/kanjiswap. 
 
 React 18 + MUI v5 (Material UI with Emotion). Entry is `src/index.js` → `src/App.js`.
 
-`src/theme.js` builds the MUI theme around whichever Japanese face is selected (`FONTS`: Noto Sans JP, Klee One, Noto Serif JP, Zen Maru Gothic — loaded from Google Fonts in `public/index.html`, which serves them split by unicode range so only rendered glyphs download). The palette is deliberately quiet — paper ground, near-black text, one green and one red — so the passage is the only thing with visual weight. The selected font is a *setting event* in the log, not separate state.
+`src/theme.js` builds the MUI theme around whichever Japanese face is selected (`FONTS`: Noto Sans JP, Klee One, Noto Serif JP — the default — and Zen Maru Gothic — loaded from Google Fonts in `public/index.html`, which serves them split by unicode range so only rendered glyphs download). The palette is deliberately quiet — paper ground, near-black text, one green and one red — so the passage is the only thing with visual weight. The selected font is a *setting event* in the log, not separate state.
 
 The flow: `App.js` renders a sidebar of the learning path plus the passage on screen, and owns the event log for every passage.
 

@@ -9,10 +9,12 @@ export const FONTS = [
   { id: 'zen-maru', label: 'Zen Maru Gothic', sample: '丸ゴシック', stack: "'Zen Maru Gothic'" },
 ];
 
-export const DEFAULT_FONT = FONTS[0].id;
+// Mincho by default: these are printed textbook passages, and they read like it.
+export const DEFAULT_FONT = 'noto-serif';
 
 export function fontById(id) {
-  return FONTS.find((font) => font.id === id) ?? FONTS[0];
+  return FONTS.find((font) => font.id === id)
+    ?? FONTS.find((font) => font.id === DEFAULT_FONT);
 }
 
 // One quiet type scale and a paper-like ground: the passage is the only thing
