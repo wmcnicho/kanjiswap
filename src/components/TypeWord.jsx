@@ -1,6 +1,7 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { toKana } from '../utils/kana';
+import { debugEnabled } from '../features';
 
 const FLASH_MS = 500;          // How long the word colours before it settles
 const FURIGANA_HOLD_MS = 2200; // How long the reading stays once it's right
@@ -24,6 +25,9 @@ const TypeWord = forwardRef(function TypeWord({
   const [typed, setTyped] = useState('');
   const [flash, setFlash] = useState(null); // 'success' | 'failure' | null
   const [furiganaShown, setFuriganaShown] = useState(false);
+  // Only shown with ?debug — what the field actually received, so a report can
+  // say which half is failing rather than "it doesn't work".
+  const [lastRaw, setLastRaw] = useState('');
   const timers = useRef([]);
   const inputRef = useRef(null);
   const wordRef = useRef(null);
@@ -76,6 +80,7 @@ const TypeWord = forwardRef(function TypeWord({
   };
 
   const handleChange = (event) => {
+    setLastRaw(event.target.value);
     if (answered) {
       return;
     }
@@ -129,90 +134,97 @@ const TypeWord = forwardRef(function TypeWord({
   }));
 
   const colour = flash === 'success' ? 'green' : flash === 'failure' ? 'red' : 'inherit';
-  const showing = answered ? reading : typed;
+  const asking = active && !answered;
 
   return (
     <Box
       component='span'
-      sx={{ position: 'relative', display: 'inline-block' }}
+      sx={{
+        display: 'inline-flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        verticalAlign: 'bottom',
+        mx: 0.25,
+      }}
       onClick={() => onActivate?.()}
     >
+      {/* Where the furigana goes: a real field while it's being answered, the
+          reading itself once it has been. An input the reader can see is also
+          an input an IME can draw its composition into — the invisible one this
+          replaces left them typing into nothing. */}
+      <Box
+        component='span'
+        data-testid='reading-slot'
+        sx={{
+          fontSize: '0.5em',
+          lineHeight: 1.4,
+          minHeight: '1.4em',
+          color: answered ? 'text.secondary' : 'text.primary',
+          opacity: answered && !furiganaShown ? 0 : 1,
+          transition: `opacity ${FURIGANA_FADE_MS}ms ease-out`,
+        }}
+      >
+        {asking ? (
+          <Box
+            component='input'
+            ref={inputRef}
+            value={typed}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onCompositionStart={() => { composing.current = true; }}
+            onCompositionEnd={handleCompositionEnd}
+            onBlur={handleBlur}
+            aria-label={`Reading for ${kanji}`}
+            autoComplete='off'
+            autoCapitalize='off'
+            autoCorrect='off'
+            spellCheck='false'
+            lang='ja'
+            sx={{
+              font: 'inherit',
+              color: 'inherit',
+              textAlign: 'center',
+              // Grows with what's typed, so the reading's length isn't given away.
+              width: `${Math.max(3, typed.length + 1)}ch`,
+              border: 0,
+              borderBottom: '1px dotted',
+              borderRadius: 0,
+              outline: 'none',
+              background: 'transparent',
+              padding: 0,
+            }}
+          />
+        ) : (
+          answered ? reading : ''
+        )}
+      </Box>
+
       <Typography
         ref={wordRef}
-        component='ruby'
+        component='span'
         variant={variant}
         data-active={active || undefined}
         sx={{
           color: colour,
-          rubyPosition: 'over',
           cursor: answered ? 'inherit' : 'pointer',
-          // The word being answered is marked, and unanswered ones are dotted,
-          // exactly as they are in the other direction.
           borderBottom: answered ? 'none' : '2px dotted',
-          backgroundColor: active && !answered ? 'rgba(0, 0, 0, 0.06)' : 'transparent',
+          backgroundColor: asking ? 'rgba(0, 0, 0, 0.06)' : 'transparent',
           borderRadius: 1,
-          py: 0.35,
+          px: 0.25,
           WebkitTapHighlightColor: 'transparent',
         }}
       >
         {kanji}
-        <Box
-          component='rt'
-          data-testid='reading-slot'
-          sx={{
-            fontSize: answered ? '0.45em' : '0.5em',
-            fontWeight: 400,
-            color: answered ? 'text.secondary' : 'text.primary',
-            opacity: answered && !furiganaShown ? 0 : 1,
-            transition: `opacity ${FURIGANA_FADE_MS}ms ease-out`,
-          }}
-        >
-          {showing}
-          {active && !answered && (
-            <Box
-              component='span'
-              aria-hidden='true'
-              sx={{
-                borderLeft: '1px solid',
-                ml: '1px',
-                animation: 'kanjiswap-caret 1s steps(2, start) infinite',
-                '@keyframes kanjiswap-caret': { to: { visibility: 'hidden' } },
-              }}
-            />
-          )}
-        </Box>
       </Typography>
 
-      {active && !answered && (
+      {debugEnabled() && asking && (
         <Box
-          component='input'
-          ref={inputRef}
-          value={typed}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onCompositionStart={() => { composing.current = true; }}
-          onCompositionEnd={handleCompositionEnd}
-          onBlur={handleBlur}
-          aria-label={`Reading for ${kanji}`}
-          autoComplete='off'
-          autoCapitalize='off'
-          autoCorrect='off'
-          spellCheck='false'
-          // Invisible, but a real input: an IME needs one, and so does a phone's
-          // keyboard. It sits over the word so a tap lands on it.
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            opacity: 0,
-            border: 0,
-            padding: 0,
-            margin: 0,
-            background: 'transparent',
-            font: 'inherit',
-          }}
-        />
+          component='span'
+          data-testid='type-debug'
+          sx={{ fontSize: '0.32em', color: 'text.secondary', whiteSpace: 'nowrap', mt: 0.5 }}
+        >
+          raw:{lastRaw || '∅'} · composing:{composing.current ? 'yes' : 'no'} · kana:{typed || '∅'} · want:{reading}
+        </Box>
       )}
     </Box>
   );

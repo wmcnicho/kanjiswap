@@ -13,10 +13,11 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-test('shows the kanji and asks for the reading', () => {
+test('shows the kanji and a field where the furigana goes', () => {
   render(<TypeWord {...word} active />);
   expect(screen.getByText('私')).toBeInTheDocument();
-  expect(screen.getByTestId('reading-slot')).toHaveTextContent('');
+  // A field the reader can see is also one an IME can draw into.
+  expect(screen.getByLabelText(/reading for 私/i)).toHaveValue('');
 });
 
 test('accepts a reading typed as kana', () => {
@@ -33,7 +34,7 @@ test('accepts one typed as romaji, and shows it as kana as it goes', () => {
   render(<TypeWord {...word} active onAttempt={onAttempt} />);
 
   type('wata');
-  expect(screen.getByTestId('reading-slot')).toHaveTextContent('わた');
+  expect(screen.getByLabelText(/reading for 私/i)).toHaveValue('わた');
   expect(onAttempt).not.toHaveBeenCalled(); // not finished yet
 
   type('watashi');
@@ -69,7 +70,7 @@ test('clears a wrong answer rather than leaving it to edit around', () => {
     jest.advanceTimersByTime(600);
   });
 
-  expect(screen.getByTestId('reading-slot')).toHaveTextContent('');
+  expect(screen.getByLabelText(/reading for 私/i)).toHaveValue('');
 });
 
 test('leaves the reading above the kanji, then lets it fade', () => {
@@ -194,4 +195,22 @@ test('takes what was typed when the reader moves on without committing it', () =
 
   // Typed correctly but never committed; losing it silently is the worst answer.
   expect(onAttempt).toHaveBeenCalledWith(true, 'わたし');
+});
+
+test('keeps the field the reader is typing into visible', () => {
+  render(<TypeWord {...word} active />);
+  const field = screen.getByLabelText(/reading for 私/i);
+
+  // The previous version hid the input under the word at opacity 0, which left
+  // an IME composing into something nobody could see.
+  expect(field).toBeVisible();
+  expect(window.getComputedStyle(field).opacity).not.toBe('0');
+});
+
+test('does not give away how long the reading is', () => {
+  render(<TypeWord kanji='一年生' reading='いちねんせい' active />);
+  const field = screen.getByLabelText(/reading for 一年生/i);
+
+  // Six kana; a field sized to fit them would be half the answer.
+  expect(window.getComputedStyle(field).width).toBe('3ch');
 });

@@ -9,3 +9,12 @@
 export function typedReadingEnabled() {
   return process.env.REACT_APP_TYPED_READING === 'on';
 }
+
+// ?debug=1 shows what the typing field is receiving. Off everywhere else, and
+// nothing about it is persisted.
+export function debugEnabled() {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  return new URLSearchParams(window.location.search).has('debug');
+}
