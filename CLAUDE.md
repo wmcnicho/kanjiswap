@@ -17,6 +17,12 @@ Standard Create React App (react-scripts 5):
 
 There is no separate lint command; ESLint (react-app config) runs as part of `npm start`/`npm run build`. On CI, `CI=true` makes those lint warnings fail the build, so keep the build warning-free.
 
+## The mark
+
+The app icon and the mark in the sidebar are 漢字 caught mid-rotation inside a sweep arrow, black on paper. `tools/make_icon.py` generates everything from one definition: `public/icon.svg` (an SVG favicon that follows the reader's light/dark setting), `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, a multi-size `favicon.ico`, and `src/components/KanjiMark.jsx`.
+
+The glyphs are **real outlines**, extracted from Noto Sans JP (OFL 1.1) via the Google Fonts subsets that carry those two characters — not `<text>`, so the mark renders identically with no font loaded. The script needs network, fontTools, Pillow, and macOS `qlmanage`; it is not part of the app build, and its output is committed. Edit the mark by changing the layout constants at the top of the script and re-running it — don't hand-edit the generated files.
+
 ## Deployment
 
 The app is hosted free on GitHub Pages at https://wmcnicho.github.io/kanjiswap. `.github/workflows/ci.yml` tests and builds every pull request; `.github/workflows/deploy.yml` repeats that on `main` and publishes `build/` via the official Pages actions (OIDC — no `gh-pages` branch, no deploy key). The `homepage` field in `package.json` is what makes assets resolve under the `/kanjiswap` project-page path; renaming the repo means changing it.

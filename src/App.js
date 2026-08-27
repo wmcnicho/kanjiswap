@@ -5,6 +5,7 @@ import SwapPassage from './components/SwapPassage';
 import PassageProgress from './components/PassageProgress';
 import PassageNav from './components/PassageNav';
 import ReadingControls from './components/ReadingControls';
+import KanjiMark from './components/KanjiMark';
 import { DEFAULT_FONT, buildTheme } from './theme';
 import passages from './data/passages.json';
 import { buildCurriculum, wordCountOf } from './utils/curriculum';
@@ -112,11 +113,14 @@ function App() {
 
   const navigation = (
     <>
-      <Toolbar sx={{ flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
-        <Typography variant='subtitle1' fontWeight={500}>KanjiSwap</Typography>
-        <Typography variant='caption' color='text.secondary'>
-          {state.totals.points} points · {state.totals.passagesCompleted} finished
-        </Typography>
+      <Toolbar sx={{ gap: 1.25, alignItems: 'center' }}>
+        <KanjiMark size={30} />
+        <Box>
+          <Typography variant='subtitle1' fontWeight={500} lineHeight={1.2}>KanjiSwap</Typography>
+          <Typography variant='caption' color='text.secondary'>
+            {state.totals.points} points · {state.totals.passagesCompleted} finished
+          </Typography>
+        </Box>
       </Toolbar>
       <Divider />
       <PassageNav

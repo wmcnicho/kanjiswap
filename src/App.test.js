@@ -43,6 +43,11 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
+test('shows the mark at the top of the rail', () => {
+  render(<App />);
+  expect(screen.getAllByRole('img', { name: /kanjiswap/i }).length).toBeGreaterThan(0);
+});
+
 test('lists the learning path as collapsible chapters', () => {
   render(<App />);
   // Chapters 2, 3 and 4 all exist in the extracted data.
