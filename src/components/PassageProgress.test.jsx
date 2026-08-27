@@ -25,7 +25,7 @@ test('reports what is left mid-passage and the result once done', () => {
 
   rerender(<PassageProgress stats={statsFor({ solved: 8, complete: true, points: 96 })} totals={totals} onTryAgain={() => {}} />);
   // The score is its own element now, so the line reads across two nodes.
-  expect(screen.getByText(/Passage complete/)).toBeInTheDocument();
+  expect(screen.getByText(/Finished/)).toBeInTheDocument();
   expect(screen.getByTestId('score-value')).toHaveTextContent('96');
 });
 
@@ -37,5 +37,18 @@ test('mentions earlier runs once there is more than one', () => {
       onTryAgain={() => {}}
     />
   );
-  expect(screen.getByText(/Finished 3 times · best 104 points/)).toBeInTheDocument();
+  expect(screen.getByText(/Finished 3 times · best 104/)).toBeInTheDocument();
+});
+
+test('the phone version fits a header bar', () => {
+  const { rerender } = render(
+    <PassageProgress compact stats={statsFor()} totals={totals} onTryAgain={() => {}} />
+  );
+  expect(screen.getByText('2/8')).toBeInTheDocument();
+  expect(screen.queryByRole('button')).not.toBeInTheDocument(); // nothing to offer mid-passage
+
+  rerender(
+    <PassageProgress compact stats={statsFor({ solved: 8, complete: true })} totals={totals} onTryAgain={() => {}} />
+  );
+  expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
 });

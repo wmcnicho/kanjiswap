@@ -151,13 +151,21 @@ test('records a correct swap as a scored event', async () => {
   expect(deriveState(store).totals.points).toBeGreaterThan(0);
 });
 
-test('shows the running score', () => {
+test('keeps the score where a long passage cannot scroll it away', () => {
   const word = firstSwapWord();
   seedSolved(word);
 
   render(<App />);
 
-  expect(screen.getByText(/points overall/)).toBeInTheDocument();
+  // The rail, the phone header, and the panel beside the passage all carry it.
+  expect(screen.getAllByTestId('score-value').length).toBeGreaterThan(1);
+  expect(screen.getAllByText(/THIS PASSAGE/).length).toBeGreaterThan(0);
+});
+
+test('credits the textbook the passages come from', () => {
+  render(<App />);
+  expect(screen.getByText(/Wako Tawa/)).toBeInTheDocument();
+  expect(screen.getByText(/Stage-Step Course/)).toBeInTheDocument();
 });
 
 test('remembers that the option keys have been shown', async () => {

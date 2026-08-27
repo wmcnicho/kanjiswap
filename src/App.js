@@ -185,9 +185,12 @@ function App() {
           <KanjiMark size={24} />
           <Typography variant='subtitle2' fontWeight={500}>KanjiSwap</Typography>
           <Box flexGrow={1} />
-          <Typography variant='caption' color='text.secondary' component='div'>
-            <Score value={state.totals.points} label='points' />
-          </Typography>
+          <PassageProgress
+            compact
+            stats={passageStats(state, passageId, wordCount)}
+            totals={state.totals}
+            onTryAgain={startAttempt}
+          />
         </Box>
 
       <Box display='flex' flexGrow={1}>
@@ -224,25 +227,51 @@ function App() {
           pb={{ xs: 9, md: 4 }} // room for the reading controls in the corner
           display='flex'
           flexDirection='column'
-          justifyContent='center'
-          alignItems='center'
         >
-          {/* Keyed by attempt so starting a fresh one clears the words on screen —
-              swap state is component-local and would otherwise survive the reset. */}
-          <SwapPassage
-            key={`${passageId}:${attempt?.attemptId ?? 'pending'}`}
-            passage={passage}
-            vertical={vertical}
-            isSolved={(word) => isSolved(state, passageId, word)}
-            hintsVisible={hintsVisible}
-            onAttempt={handleAttempt}
-            onRevealHints={revealHints}
-          />
-          <PassageProgress
-            stats={passageStats(state, passageId, wordCount)}
-            totals={state.totals}
-            onTryAgain={startAttempt}
-          />
+          <Box display='flex' flexGrow={1} gap={4} justifyContent='center'>
+            <Box display='flex' flexDirection='column' justifyContent='center' alignItems='center' flexGrow={1}>
+              {/* Keyed by attempt so starting a fresh one clears the words on screen —
+                  swap state is component-local and would otherwise survive the reset. */}
+              <SwapPassage
+                key={`${passageId}:${attempt?.attemptId ?? 'pending'}`}
+                passage={passage}
+                vertical={vertical}
+                isSolved={(word) => isSolved(state, passageId, word)}
+                hintsVisible={hintsVisible}
+                onAttempt={handleAttempt}
+                onRevealHints={revealHints}
+              />
+            </Box>
+
+            {/* Sticky, so a passage taller than the window can't scroll the
+                score out of sight. */}
+            <Box
+              sx={{
+                display: { xs: 'none', md: 'block' },
+                width: 180,
+                flexShrink: 0,
+                position: 'sticky',
+                top: 32,
+                alignSelf: 'flex-start',
+              }}
+            >
+              <PassageProgress
+                stats={passageStats(state, passageId, wordCount)}
+                totals={state.totals}
+                onTryAgain={startAttempt}
+              />
+            </Box>
+          </Box>
+
+          <Box component='footer' sx={{ mt: 6, textAlign: 'center' }}>
+            <Typography variant='caption' color='text.secondary' component='div'>
+              Passages from <i>The Japanese Stage-Step Course</i> by Wako Tawa （多和わ子）,
+              Japanese Language Program, Amherst College.
+            </Typography>
+            <Typography variant='caption' color='text.secondary' component='div'>
+              Progress is saved in this browser only.
+            </Typography>
+          </Box>
         </Box>
 
         <ReadingControls

@@ -46,7 +46,7 @@ The flow: `App.js` renders a sidebar of the learning path plus the passage on sc
 - `ReadingControls.jsx` — the reading settings parked bottom-right at 45% opacity until hovered: the font picker (each face naming itself in its own type) and the 縦/横 writing-direction toggle. Both are `setting_changed` events, so they restore on reload and are timestamped in the log.
 - `PassageNav.jsx` — the sidebar: chapters that collapse, each passage a progress bar over its opening kana. A tick means finished at least once; the bar tracks the attempt in progress, so it resets when the student tries again. Rendered into two MUI `Drawer`s — permanent from `md` up, temporary behind a ☰ button below it.
 - `Score.jsx` — a running score that says when it moved: the figure sits in a faint well with tabular numerals, takes a warmer tone for ~800ms when it rises, and (with `showDelta`) shows the gain in parentheses before it fades. A falling value — a fresh attempt resetting to zero — deliberately does nothing.
-- `PassageProgress.jsx` — the tally under a passage (solved/total, points, streak, wrong guesses) and, once the passage is finished, the **Try again** button and how it has gone before. Try again is deliberately absent mid-passage: it starts a fresh attempt rather than erasing anything, since the finished run stays in history.
+- `PassageProgress.jsx` — how the current passage is going (solved/total, points, streak, wrong guesses) and, once it's finished, the **Try again** button and how it has gone before. Try again is deliberately absent mid-passage: it starts a fresh attempt rather than erasing anything, since the finished run stays in history. It sits *beside* the passage in a sticky column from `md` up, and in the sticky header (`compact`) below that — under the passage it scrolled out of sight exactly when a long passage made it most useful.
 
 **On a phone.** Below `md` the rail becomes a temporary drawer capped at `min(280px, 85vw)`, and a sticky header carries what the hidden rail would otherwise hold — the mark, the name, and the running score. `SwapWord` takes a tap to open its choices: MUI only opens a tooltip on touch after a ~700ms long press, which nobody would guess, and tapping the open word again dismisses it. Option cells get 44px minimums on `xs`. Key hints are suppressed on `(pointer: coarse)` — there are no keys to hint at. Heights prefer `dvh` where supported so a phone's address bar doesn't crop the passage, and `ReadingControls` clears the home indicator with `env(safe-area-inset-bottom)`.
 
@@ -57,6 +57,10 @@ The flow: `App.js` renders a sidebar of the learning path plus the passage on sc
 `src/data/passages.json` is copied from the j201 repo's `data/reading_passages.json` — 15 passages, 62 lines. Each carries `stage` ("Stage 2-3", the real textbook chapter), `exercise` (normalized to two values), `section` (the two combined), `id`, `source_section`, plus `with_furigana` / `without_furigana` / `ruby_pairs`.
 
 **Do not re-run the extractor to regenerate this.** `extract_reading_passage_v2.py` in the j201 repo reads past the end of each passage and swallows the "New vocabulary / Kanji / Kana / Meaning" table that follows — that contamination is what made a 62-line set into 604 lines, with table words becoming swap targets. The file here derives from a hand-repaired source. Teaching the extractor where a passage ends is the durable fix and lives in the j201 repo.
+
+## Attribution
+
+The passages are from *The Japanese Stage-Step Course* by **Wako Tawa（多和わ子）**, Japanese Language Program, Department of Asian Languages and Civilizations, Amherst College. The app credits this in its footer. The source carries "Copyright © 2026 by Wako Tawa. All rights reserved" — worth knowing before the passage set is widened or the site is promoted.
 
 ## Exercise Data
 
