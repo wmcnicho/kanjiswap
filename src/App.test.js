@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
 import passages from './data/passages.json';
@@ -146,4 +146,14 @@ test('shows the running score', () => {
   render(<App />);
 
   expect(screen.getByText(/points overall/)).toBeInTheDocument();
+});
+
+test('remembers that the option keys have been shown', async () => {
+  render(<App />);
+
+  fireEvent.keyDown(window, { key: 'a' });
+
+  await waitFor(() => {
+    expect(deriveState(loadStore()).settings.keyHints).toBe('revealed');
+  });
 });

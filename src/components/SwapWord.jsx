@@ -1,18 +1,33 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Box, Tooltip, Typography } from '@mui/material';
 import SwapOptions from './SwapOptions';
 
-const FLASH_MS = 500;      // How long the word colours green before it swaps
+const FLASH_MS = 500;          // How long the word colours before it swaps
 const FURIGANA_HOLD_MS = 2200; // How long the reading stays after the swap
 const FURIGANA_FADE_MS = 900;
+const HINT_DELAY_MS = 3000;    // Hovering this long means you're looking for something
 
-function SwapWord({ reading, correctItem, options, variant = 'h5', solved = false, placement = 'bottom', onAttempt }) {
+const SwapWord = forwardRef(function SwapWord({
+  reading,
+  correctItem,
+  options,
+  variant = 'h5',
+  solved = false,
+  placement = 'bottom',
+  active = false,
+  hintsVisible = false,
+  onAttempt,
+  onActivate,
+  onDeactivate,
+  onHintDelayElapsed,
+}, ref) {
   // A word solved earlier in this attempt starts out already swapped, without
   // the flash or the furigana — both belong to the click that earned them.
   const [swappedItem, setSwappedItem] = useState(solved ? correctItem : null);
   const [flash, setFlash] = useState(null); // 'success' | 'failure' | null
   const [furiganaShown, setFuriganaShown] = useState(false);
   const timers = useRef([]);
+  const wordRef = useRef(null);
 
   const later = (callback, delay) => {
     timers.current.push(setTimeout(callback, delay));
@@ -20,7 +35,24 @@ function SwapWord({ reading, correctItem, options, variant = 'h5', solved = fals
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
-  const handleSuccess = (clickedItem) => {
+  // Keep the word being played in view — the keyboard can walk past the fold.
+  useEffect(() => {
+    if (active) {
+      // Optional call: jsdom and older browsers don't implement it.
+      wordRef.current?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    }
+  }, [active]);
+
+  // The reader has been hovering a while without choosing: show them the keys.
+  useEffect(() => {
+    if (!active || hintsVisible) {
+      return undefined;
+    }
+    const timer = setTimeout(() => onHintDelayElapsed?.(), HINT_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [active, hintsVisible, onHintDelayElapsed]);
+
+  const succeed = (clickedItem) => {
     onAttempt?.(true, clickedItem);
     setFlash('success'); // Change text color to green
     later(() => {
@@ -33,11 +65,26 @@ function SwapWord({ reading, correctItem, options, variant = 'h5', solved = fals
     }, FLASH_MS);
   };
 
-  const handleFailure = (clickedItem) => {
+  const fail = (clickedItem) => {
     onAttempt?.(false, clickedItem);
     setFlash('failure'); // Change text color to red
     later(() => setFlash(null), FLASH_MS);
   };
+
+  const choose = (item) => {
+    if (swappedItem) {
+      return; // Already solved; nothing left to pick
+    }
+    if (item === correctItem) {
+      succeed(item);
+    } else {
+      fail(item);
+    }
+  };
+
+  // Lets the passage play this word from the keyboard, through exactly the same
+  // path a click takes.
+  useImperativeHandle(ref, () => ({ choose }));
 
   const color = flash === 'success' ? 'green' : flash === 'failure' ? 'red' : 'inherit';
 
@@ -64,12 +111,17 @@ function SwapWord({ reading, correctItem, options, variant = 'h5', solved = fals
 
   const unsolvedWord = (
     <Typography
+      ref={wordRef}
       component='span'
       variant={variant}
       sx={{
         color,
         cursor: 'pointer',
         borderBottom: '2px dotted', // Mark words still waiting for their kanji
+        // The word the keyboard is aimed at, marked without shouting about it.
+        backgroundColor: active ? 'rgba(0, 0, 0, 0.06)' : 'transparent',
+        borderRadius: 1,
+        transition: 'background-color 150ms',
       }}
     >
       {reading}
@@ -82,13 +134,16 @@ function SwapWord({ reading, correctItem, options, variant = 'h5', solved = fals
 
   return (
     <Tooltip
-      title={<SwapOptions handleSuccess={handleSuccess} handleFailure={handleFailure} correctItem={correctItem} options={options} />}
+      open={active}
+      onOpen={() => onActivate?.()}
+      onClose={() => onDeactivate?.()}
+      title={<SwapOptions options={options} onChoose={choose} hintsVisible={hintsVisible} />}
       placement={placement}
       arrow
     >
       {unsolvedWord}
     </Tooltip>
   );
-}
+});
 
 export default SwapWord;

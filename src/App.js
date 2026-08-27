@@ -46,7 +46,15 @@ function App() {
   // changed font is recorded alongside how they were doing at the time.
   const fontId = state.settings.font ?? DEFAULT_FONT;
   const vertical = state.settings.writingMode === 'vertical';
+  // Once someone has been shown the option keys, they stay shown.
+  const hintsVisible = state.settings.keyHints === 'revealed';
   const theme = useMemo(() => buildTheme(fontId), [fontId]);
+
+  const revealHints = useCallback(() => {
+    setStore((current) => (deriveState(current).settings.keyHints === 'revealed'
+      ? current
+      : appendEvent(current, EVENT.settingChanged, { setting: 'keyHints', value: 'revealed' })));
+  }, []);
 
   const changeSetting = (setting, value) => {
     setStore((current) => appendEvent(current, EVENT.settingChanged, { setting, value }));
@@ -183,8 +191,10 @@ function App() {
             key={`${passageId}:${attempt?.attemptId ?? 'pending'}`}
             passage={passage}
             vertical={vertical}
-          isSolved={(word) => isSolved(state, passageId, word)}
+            isSolved={(word) => isSolved(state, passageId, word)}
+            hintsVisible={hintsVisible}
             onAttempt={handleAttempt}
+            onRevealHints={revealHints}
           />
           <PassageProgress
             stats={passageStats(state, passageId, wordCount)}

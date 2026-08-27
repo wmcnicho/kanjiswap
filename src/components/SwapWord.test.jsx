@@ -12,10 +12,7 @@ afterEach(() => {
 });
 
 function swapIn(container) {
-  fireEvent.mouseOver(screen.getByText(word.reading));
-  act(() => {
-    jest.advanceTimersByTime(200); // MUI's tooltip enter delay
-  });
+  // The passage decides which word is open; here we render it already active.
   fireEvent.click(screen.getByText(word.correctItem));
   act(() => {
     jest.advanceTimersByTime(600); // the success flash, then the swap
@@ -24,7 +21,7 @@ function swapIn(container) {
 }
 
 test('shows the reading over the kanji it just swapped in, then lets it fade', () => {
-  const { container } = render(<SwapWord {...word} />);
+  const { container } = render(<SwapWord {...word} active />);
 
   swapIn(container);
 
@@ -39,7 +36,7 @@ test('shows the reading over the kanji it just swapped in, then lets it fade', (
 });
 
 test('keeps the faded reading in the layout so the line does not shift', () => {
-  const { container } = render(<SwapWord {...word} />);
+  const { container } = render(<SwapWord {...word} active />);
   swapIn(container);
   act(() => {
     jest.advanceTimersByTime(2500);
