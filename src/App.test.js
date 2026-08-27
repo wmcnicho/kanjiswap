@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import App from './App';
 import passages from './data/passages.json';
 import { parsePassage } from './utils/passage';
-import { previewOf } from './utils/curriculum';
+import { titleOf } from './utils/curriculum';
 import {
   EVENT,
   STORAGE_KEY,
@@ -69,7 +69,7 @@ test('switching passages loads the one that was clicked', async () => {
   act(() => {
     // The nav renders twice — permanent drawer plus the keepMounted temporary
     // one — so either copy will do.
-    userEvent.click(screen.getAllByText(previewOf(passages[1]))[0]);
+    userEvent.click(screen.getAllByText(titleOf(passages[1]).title)[0]);
   });
 
   await waitFor(() => {
@@ -78,14 +78,19 @@ test('switching passages loads the one that was clicked', async () => {
   expect(screen.queryAllByText('いちねんせい')).toHaveLength(0);
 });
 
-test('lists passages by what the student reads, not by the answers', () => {
-  render(<App />);
+test('names every passage in kana, never in the kanji it is asking for', () => {
+  // Showing kanji in the rail would hand over the answers the exercise is
+  // built on, so this holds for all fourteen, expanded or not.
+  for (const passage of passages) {
+    expect(titleOf(passage).title).toMatch(/^[ぁ-ゖー「」、。…]+$/);
+  }
+});
 
-  // `without_furigana` is the kanji text with readings stripped, so putting it
-  // in the rail would hand over the kanji the exercise is asking for.
-  const preview = screen.getAllByText(previewOf(passages[1]))[0];
-  expect(preview.textContent).not.toContain(passages[1].without_furigana.slice(0, 4));
-  expect(preview.textContent).toMatch(/^[ぁ-ゖー「」、。…]+$/);
+test('shows the title and its emoji in the rail', () => {
+  render(<App />);
+  const { title, emoji } = titleOf(passages[0]);
+  expect(screen.getAllByText(title).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(emoji).length).toBeGreaterThan(0);
 });
 
 test('renders the first passage with readings shown as hiragana', () => {

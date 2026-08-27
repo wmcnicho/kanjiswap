@@ -7,6 +7,8 @@
 // honest until that lands, and costs nothing once it does.
 
 import { parsePassage, swapSegments } from './passage';
+import { passageKey } from './progress';
+import PASSAGE_TITLES from '../data/passageTitles';
 
 const PREVIEW_LENGTH = 14;
 
@@ -53,6 +55,14 @@ function isMostlyJapanese(line) {
   return japanese > 0 && japanese >= latin;
 }
 
+// What the sidebar calls a passage: a one-word title and an emoji for the gist,
+// falling back to the opening line for any passage not in the map (a newly
+// extracted one, say) so the rail is never blank.
+export function titleOf(passage) {
+  const named = PASSAGE_TITLES[passageKey(passage)];
+  return named ?? { title: previewOf(passage), emoji: null };
+}
+
 export function wordCountOf(passage) {
   return swapSegments(parsePassage(passage.with_furigana)).length;
 }
@@ -77,6 +87,7 @@ export function buildCurriculum(passages) {
       index,
       chapter,
       type,
+      ...titleOf(passage),
       preview: previewOf(passage),
       wordCount: wordCountOf(passage),
     });

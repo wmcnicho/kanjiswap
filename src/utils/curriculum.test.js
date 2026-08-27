@@ -1,4 +1,5 @@
-import { buildCurriculum, chapterOf, exerciseTypeOf, previewOf } from './curriculum';
+import { buildCurriculum, chapterOf, exerciseTypeOf, previewOf, titleOf } from './curriculum';
+import passages from '../data/passages.json';
 
 test('reads the chapter number off a section label', () => {
   expect(chapterOf('3: Discourse Practice (Reading)')).toBe(3);
@@ -66,4 +67,25 @@ test('counts the swappable words in a passage', () => {
     { section: '2: Reading Practice', with_furigana: '私(わたし)は本(ほん)を読(よ)む', without_furigana: 'わたしはほんをよむ' },
   ]);
   expect(chapter.passages[0].wordCount).toBe(3);
+});
+
+test('every shipped passage has a title of its own', () => {
+  // The fallback keeps the rail from going blank, but no passage in the data
+  // should be relying on it.
+  for (const passage of passages) {
+    const { title, emoji } = titleOf(passage);
+    expect(emoji).toBeTruthy();
+    expect(title).not.toBe(previewOf(passage));
+  }
+});
+
+test('titles are one word, not a sentence', () => {
+  for (const passage of passages) {
+    expect(titleOf(passage).title).not.toMatch(/[。、\s]/);
+  }
+});
+
+test('falls back to the opening line for a passage nobody has named', () => {
+  const unnamed = { with_furigana: '新(あたら)しい文(ぶん)です。' };
+  expect(titleOf(unnamed)).toEqual({ title: 'あたらしいぶんです。', emoji: null });
 });

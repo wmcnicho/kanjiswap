@@ -122,7 +122,7 @@ function App() {
   const navigation = (
     <>
       <Toolbar sx={{ gap: 1.25, alignItems: 'center' }}>
-        <KanjiMark size={30} />
+        <KanjiMark size={38} />
         <Box>
           <Typography variant='subtitle1' fontWeight={500} lineHeight={1.2}>KanjiSwap</Typography>
           <Typography variant='caption' color='text.secondary'>

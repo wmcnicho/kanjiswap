@@ -64,7 +64,11 @@ function PassageNav({ chapters, selectedIndex, statsFor, onSelect }) {
                       noWrap
                       color={finished ? 'success.main' : 'text.primary'}
                     >
-                      {finished ? '✓ ' : ''}{passage.preview}
+                      {passage.emoji && (
+                        <Box component='span' sx={{ mr: 0.75 }} aria-hidden='true'>{passage.emoji}</Box>
+                      )}
+                      <Box component='span'>{passage.title}</Box>
+                      {finished && <Box component='span' aria-label='finished'> ✓</Box>}
                     </Typography>
                     <LinearProgress
                       variant='determinate'
