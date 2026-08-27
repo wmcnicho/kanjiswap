@@ -1,7 +1,7 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { finalizeKana, toKana } from '../utils/kana';
-import { debugEnabled } from '../features';
+import { buildStamp, debugEnabled } from '../features';
 
 const FLASH_MS = 500;          // How long the word colours before it settles
 const FURIGANA_HOLD_MS = 2200; // How long the reading stays once it's right
@@ -228,7 +228,7 @@ const TypeWord = forwardRef(function TypeWord({
           data-testid='type-debug'
           sx={{ fontSize: '0.32em', color: 'text.secondary', whiteSpace: 'nowrap', mt: 0.5 }}
         >
-          raw:{lastRaw || '∅'} · composing:{composing.current ? 'yes' : 'no'} · kana:{typed || '∅'} · want:{reading}
+          build:{buildStamp()} · raw:{lastRaw || '∅'} · composing:{composing.current ? 'yes' : 'no'} · kana:{typed || '∅'} · want:{reading}
         </Box>
       )}
     </Box>

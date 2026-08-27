@@ -56,6 +56,8 @@ jobs:
       # which is the behaviour we want as a quality gate.
       - name: Build
         working-directory: main
+        env:
+          REACT_APP_BUILD: ${{ github.sha }}
         run: npm run build
 
       # Never blocks the release: unfinished work is the point of that branch.
@@ -66,6 +68,7 @@ jobs:
         env:
           PUBLIC_URL: /kanjiswap/next
           REACT_APP_TYPED_READING: 'on'
+          REACT_APP_BUILD: ${{ github.sha }}
         run: |
           npm ci
           npm run build
