@@ -26,7 +26,7 @@ import {
 const DRAWER_WIDTH = 280;
 
 // The passages are fixed at build time, so the learning path and its keys are too.
-const chapters = buildCurriculum(passages);
+const stages = buildCurriculum(passages);
 const passageKeys = passages.map(passageKey);
 const wordCounts = passages.map(wordCountOf);
 
@@ -134,7 +134,7 @@ function App() {
       </Toolbar>
       <Divider />
       <PassageNav
-        chapters={chapters}
+        stages={stages}
         selectedIndex={passageIndex}
         statsFor={(item) => passageStats(state, passageKeys[item.index], item.wordCount)}
         onSelect={handleSelect}

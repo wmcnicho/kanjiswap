@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import App from './App';
 import passages from './data/passages.json';
 import { parsePassage } from './utils/passage';
-import { titleOf } from './utils/curriculum';
+import { titleOf, wordCountOf } from './utils/curriculum';
 import {
   EVENT,
   STORAGE_KEY,
@@ -48,23 +48,23 @@ test('shows the mark at the top of the rail', () => {
   expect(screen.getAllByRole('img', { name: /kanjiswap/i }).length).toBeGreaterThan(0);
 });
 
-test('lists the learning path as collapsible chapters', () => {
+test('lists the learning path as collapsible textbook stages', () => {
   render(<App />);
-  // Chapters 2, 3 and 4 all exist in the extracted data.
-  expect(screen.getAllByText(/Chapter 2/).length).toBeGreaterThan(0);
-  expect(screen.getAllByText(/Chapter 3/).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/Stage 1-3/).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/Stage 2-8/).length).toBeGreaterThan(0);
 });
 
-test('opens the chapter holding the passage on screen', () => {
+test('opens the stage holding the passage on screen', () => {
   render(<App />);
-  // The first passage's chapter starts expanded, so its preview is visible.
-  const [firstChapter] = screen.getAllByText(/Chapter 2/);
-  expect(firstChapter.textContent).toMatch(/▾/);
+  // The first passage's stage starts expanded, so its title is visible.
+  const [firstStage] = screen.getAllByText(/Stage 1-3/);
+  expect(firstStage.textContent).toMatch(/▾/);
 });
 
 test('switching passages loads the one that was clicked', async () => {
   render(<App />);
-  expect(screen.getAllByText('いちねんせい').length).toBeGreaterThan(0); // the first passage
+  const words = (index) => new RegExp(`0/${wordCountOf(passages[index])} swapped`);
+  expect(screen.getByText(words(0))).toBeInTheDocument();
 
   act(() => {
     // The nav renders twice — permanent drawer plus the keepMounted temporary
@@ -73,9 +73,8 @@ test('switching passages loads the one that was clicked', async () => {
   });
 
   await waitFor(() => {
-    expect(screen.getAllByText('だいがく').length).toBeGreaterThan(0); // the second
+    expect(screen.getByText(words(1))).toBeInTheDocument();
   });
-  expect(screen.queryAllByText('いちねんせい')).toHaveLength(0);
 });
 
 test('names every passage in kana, never in the kanji it is asking for', () => {

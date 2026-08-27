@@ -1,33 +1,58 @@
-import { buildCurriculum, chapterOf, exerciseTypeOf, previewOf, titleOf } from './curriculum';
+import { buildCurriculum, exerciseTypeOf, previewOf, stageOf, titleOf, wordCountOf } from './curriculum';
 import passages from '../data/passages.json';
 
-test('reads the chapter number off a section label', () => {
-  expect(chapterOf('3: Discourse Practice (Reading)')).toBe(3);
-  expect(chapterOf('no number here')).toBeNull();
+const passage = (fields) => ({
+  with_furigana: '私(わたし)は本(ほん)を読(よ)む',
+  without_furigana: '私は本を読む',
+  ...fields,
 });
 
-test('normalizes the three spellings the extractor produces', () => {
-  const spellings = [
-    '2: Reading practice (sentences)',
-    '2: Reading Practice (Sentences)',
-    '2: Reading Practices (Sentences)',
-  ];
-  expect(new Set(spellings.map(exerciseTypeOf)).size).toBe(1);
-  expect(exerciseTypeOf(spellings[0])).toBe('Reading Practice');
+test('reads the textbook stage straight off the passage', () => {
+  expect(stageOf(passage({ stage: 'Stage 2-3' }))).toBe('Stage 2-3');
+});
+
+test('normalizes the exercise name for display', () => {
+  expect(exerciseTypeOf(passage({ exercise: 'Discourse practice (reading)' }))).toBe('Discourse Practice');
+  expect(exerciseTypeOf(passage({ exercise: 'Reading practices (sentences)' }))).toBe('Reading Practice');
+});
+
+test('groups passages by stage, keeping their original indices', () => {
+  const stages = buildCurriculum([
+    passage({ stage: 'Stage 2-3', exercise: 'Discourse practice (reading)' }),
+    passage({ stage: 'Stage 1-5', exercise: 'Reading practice (sentences)' }),
+    passage({ stage: 'Stage 1-5', exercise: 'Reading practice (sentences)' }),
+  ]);
+
+  expect(stages.map((stage) => stage.stage)).toEqual(['Stage 1-5', 'Stage 2-3']);
+  expect(stages[0].passages.map((item) => item.index)).toEqual([1, 2]);
+  expect(stages[0].label).toBe('Stage 1-5 · Reading Practice');
+});
+
+test('orders stages by number, not alphabetically', () => {
+  const stages = buildCurriculum([
+    passage({ stage: 'Stage 2-10' }),
+    passage({ stage: 'Stage 2-2' }),
+    passage({ stage: 'Stage 1-8' }),
+  ]);
+  expect(stages.map((stage) => stage.stage)).toEqual(['Stage 1-8', 'Stage 2-2', 'Stage 2-10']);
+});
+
+test('names a stage of mixed exercises by the stage alone', () => {
+  const [stage] = buildCurriculum([
+    passage({ stage: 'Stage 1-3', exercise: 'Discourse practice (reading)' }),
+    passage({ stage: 'Stage 1-3', exercise: 'Reading practice (sentences)' }),
+  ]);
+  expect(stage.label).toBe('Stage 1-3');
 });
 
 test('previews a passage as the student sees it, in kana', () => {
-  expect(previewOf({ with_furigana: '私(わたし)は本(ほん)を読(よ)む' })).toBe('わたしはほんをよむ');
+  expect(previewOf(passage())).toBe('わたしはほんをよむ');
 });
 
 test('never previews the kanji the student is meant to supply', () => {
   // `without_furigana` is the kanji text, not the kana text — previewing it
   // would print the answers in the sidebar.
-  const preview = previewOf({
-    with_furigana: '私(わたし)は本(ほん)を読(よ)む',
-    without_furigana: '私は本を読む',
-  });
-  expect(preview).not.toMatch(/私|本|読/);
+  expect(previewOf(passage())).not.toMatch(/私|本|読/);
 });
 
 test('skips a textbook instruction line written in English', () => {
@@ -37,55 +62,39 @@ test('skips a textbook instruction line written in English', () => {
   expect(preview).toBe('わたしはほんをよむ');
 });
 
-test('truncates a long opening line', () => {
-  expect(previewOf({ with_furigana: '田(た)中(なか)先生(せんせい)は大学(だいがく)の先生(せんせい)です。' }))
-    .toBe('たなかせんせいはだいがくのせ…');
-});
-
-test('groups passages into chapters and keeps their original indices', () => {
-  const chapters = buildCurriculum([
-    { section: '3: Discourse Practice (Reading)', with_furigana: '本(ほん)', without_furigana: 'ほん' },
-    { section: '2: Reading practice (sentences)', with_furigana: '私(わたし)', without_furigana: 'わたし' },
-    { section: '2: Reading Practice (Sentences)', with_furigana: '花(はな)', without_furigana: 'はな' },
-  ]);
-
-  expect(chapters.map((chapter) => chapter.chapter)).toEqual([2, 3]);
-  expect(chapters[0].passages.map((passage) => passage.index)).toEqual([1, 2]);
-  expect(chapters[0].label).toBe('Chapter 2 · Reading Practice');
-});
-
-test('labels a chapter with mixed exercise types by number alone', () => {
-  const [chapter] = buildCurriculum([
-    { section: '4: Discourse Practice (Reading)', with_furigana: '本(ほん)', without_furigana: 'ほん' },
-    { section: '4: Reading Practice (Sentences)', with_furigana: '私(わたし)', without_furigana: 'わたし' },
-  ]);
-  expect(chapter.label).toBe('Chapter 4');
-});
-
 test('counts the swappable words in a passage', () => {
-  const [chapter] = buildCurriculum([
-    { section: '2: Reading Practice', with_furigana: '私(わたし)は本(ほん)を読(よ)む', without_furigana: 'わたしはほんをよむ' },
-  ]);
-  expect(chapter.passages[0].wordCount).toBe(3);
+  expect(wordCountOf(passage())).toBe(3);
 });
 
-test('every shipped passage has a title of its own', () => {
-  // The fallback keeps the rail from going blank, but no passage in the data
-  // should be relying on it.
-  for (const passage of passages) {
-    const { title, emoji } = titleOf(passage);
-    expect(emoji).toBeTruthy();
-    expect(title).not.toBe(previewOf(passage));
-  }
-});
+describe('the shipped passages', () => {
+  test('every one belongs to a real textbook stage', () => {
+    for (const item of passages) {
+      expect(item.stage).toMatch(/^Stage \d+-\d+$/);
+    }
+  });
 
-test('titles are one word, not a sentence', () => {
-  for (const passage of passages) {
-    expect(titleOf(passage).title).not.toMatch(/[。、\s]/);
-  }
-});
+  test('are grouped one stage per chapter, not all under one heading', () => {
+    // The old data had ten passages from ten chapters all labelled "3:".
+    const stages = buildCurriculum(passages);
+    expect(stages.length).toBeGreaterThan(5);
+    expect(Math.max(...stages.map((stage) => stage.passages.length))).toBeLessThan(4);
+  });
 
-test('falls back to the opening line for a passage nobody has named', () => {
-  const unnamed = { with_furigana: '新(あたら)しい文(ぶん)です。' };
-  expect(titleOf(unnamed)).toEqual({ title: 'あたらしいぶんです。', emoji: null });
+  test('carry no vocabulary-table debris', () => {
+    // The old extractor read past the end of each passage and swallowed the
+    // "New vocabulary / Kanji / Kana / Meaning" table that follows it.
+    for (const item of passages) {
+      expect(item.with_furigana).not.toMatch(/New vocabulary|Meaning|Reading Kanji/i);
+      expect(item.with_furigana.split('\n').length).toBeLessThan(12);
+    }
+  });
+
+  test('every one has a title of its own', () => {
+    for (const item of passages) {
+      const { title, emoji } = titleOf(item);
+      expect(emoji).toBeTruthy();
+      expect(title).not.toBe(previewOf(item));
+      expect(title).not.toMatch(/[。、\s]/);
+    }
+  });
 });

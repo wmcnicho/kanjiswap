@@ -12,10 +12,10 @@ place — green for a correct swap, red for a wrong guess.
 
 ## The exercises
 
-The 14 passages come from a real JAPA201 (Genki-style) textbook, extracted with
-the scripts in a companion repo. `src/data/passages.json` is that extractor's
-`j201_reading_passages.jsonl` output as a JSON array so Create React App can
-import it directly; regenerate it whenever the JSONL changes.
+The 15 passages come from a real JAPA201 (Genki-style) textbook, extracted in a
+companion repo. `src/data/passages.json` is copied from that repo's
+`data/reading_passages.json`. Each passage names the textbook stage it belongs
+to, which is what the sidebar groups on.
 
 Each passage carries the text with inline furigana (`私(わたし)`), the same text
 without it, and the kanji/reading pairs in passage order. The app parses the

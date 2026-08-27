@@ -9,23 +9,23 @@ import {
   Typography,
 } from '@mui/material';
 
-// The learning path: chapters that collapse, each passage showing how far
-// through it the student is.
-function PassageNav({ chapters, selectedIndex, statsFor, onSelect }) {
-  const chapterOfSelected = chapters.find((chapter) =>
-    chapter.passages.some((passage) => passage.index === selectedIndex)
+// The learning path: textbook stages that collapse, each passage showing how
+// far through it the student is.
+function PassageNav({ stages, selectedIndex, statsFor, onSelect }) {
+  const stageOfSelected = stages.find((stage) =>
+    stage.passages.some((passage) => passage.index === selectedIndex)
   );
-  const [openChapters, setOpenChapters] = useState(() =>
-    new Set(chapterOfSelected ? [chapterOfSelected.chapter] : [])
+  const [openStages, setOpenStages] = useState(() =>
+    new Set(stageOfSelected ? [stageOfSelected.stage] : [])
   );
 
-  const toggleChapter = (chapter) => {
-    setOpenChapters((open) => {
+  const toggleStage = (stage) => {
+    setOpenStages((open) => {
       const next = new Set(open);
-      if (next.has(chapter)) {
-        next.delete(chapter);
+      if (next.has(stage)) {
+        next.delete(stage);
       } else {
-        next.add(chapter);
+        next.add(stage);
       }
       return next;
     });
@@ -33,23 +33,23 @@ function PassageNav({ chapters, selectedIndex, statsFor, onSelect }) {
 
   return (
     <List dense disablePadding sx={{ py: 1 }}>
-      {chapters.map((chapter) => {
-        const open = openChapters.has(chapter.chapter);
-        const done = chapter.passages.filter((passage) => isFinished(statsFor(passage))).length;
+      {stages.map((stage) => {
+        const open = openStages.has(stage.stage);
+        const done = stage.passages.filter((passage) => isFinished(statsFor(passage))).length;
 
         return (
-          <Box key={chapter.label} sx={{ mb: 0.5 }}>
-            <ListItemButton onClick={() => toggleChapter(chapter.chapter)} sx={{ py: 0.75 }}>
+          <Box key={stage.label} sx={{ mb: 0.5 }}>
+            <ListItemButton onClick={() => toggleStage(stage.stage)} sx={{ py: 0.75 }}>
               <ListItemText
-                primary={`${open ? '▾' : '▸'} ${chapter.label}`}
-                secondary={`${done}/${chapter.passages.length} finished`}
+                primary={`${open ? '▾' : '▸'} ${stage.label}`}
+                secondary={`${done}/${stage.passages.length} finished`}
                 primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
                 secondaryTypographyProps={{ variant: 'caption' }}
               />
             </ListItemButton>
 
             <Collapse in={open} timeout='auto' unmountOnExit>
-              {chapter.passages.map((passage) => {
+              {stage.passages.map((passage) => {
                 const stats = statsFor(passage);
                 const finished = isFinished(stats);
                 return (

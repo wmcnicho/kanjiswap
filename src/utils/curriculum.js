@@ -1,10 +1,11 @@
 // Turns the flat passage list into the learning path the sidebar shows.
 //
-// The section labels in the extracted data are inconsistent — three spellings
-// of "Reading Practice (Sentences)", and Discourse Practice appearing under
-// both chapter 3 and chapter 4 — so they are normalized here for display. The
-// real fix belongs in the extractor in the j201 repo; this keeps the navigation
-// honest until that lands, and costs nothing once it does.
+// Passages carry the textbook stage they came from (`stage`, e.g. "Stage 2-3")
+// and a normalized exercise name (`exercise`), so grouping is a matter of
+// reading fields rather than parsing a heading. Earlier data had neither, and
+// the sidebar had to pick a chapter number out of a section string that turned
+// out to be the exercise number — ten passages from ten different chapters all
+// claiming to be chapter 3.
 
 import { parsePassage, swapSegments } from './passage';
 import { passageKey } from './progress';
@@ -12,21 +13,27 @@ import PASSAGE_TITLES from '../data/passageTitles';
 
 const PREVIEW_LENGTH = 14;
 
-// "3: Discourse Practice (Reading)" -> 3
-export function chapterOf(section) {
-  const match = /^\s*(\d+)/.exec(section ?? '');
-  return match ? Number(match[1]) : null;
+export function stageOf(passage) {
+  return passage.stage ?? passage.section ?? 'Other';
 }
 
-// "2: Reading Practices (Sentences)" -> "Reading Practice"
-export function exerciseTypeOf(section) {
-  const withoutChapter = (section ?? '').replace(/^\s*\d+\s*:\s*/, '');
-  const withoutQualifier = withoutChapter.replace(/\s*\([^)]*\)\s*$/, '');
-  return withoutQualifier
+// "Discourse practice (reading)" -> "Discourse Practice"
+export function exerciseTypeOf(passage) {
+  const raw = passage.exercise ?? passage.section ?? '';
+  return raw
+    .replace(/\s*\([^)]*\)\s*$/, '')
     .trim()
     .toLowerCase()
     .replace(/\bpractices\b/, 'practice')
     .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+// What the sidebar calls a passage: a one-word title and an emoji for the gist,
+// falling back to the opening line for any passage not in the map (a newly
+// extracted one, say) so the rail is never blank.
+export function titleOf(passage) {
+  const named = PASSAGE_TITLES[passageKey(passage)];
+  return named ?? { title: previewOf(passage), emoji: null };
 }
 
 // The opening words of a passage as the student sees them — kana, not kanji.
@@ -55,37 +62,29 @@ function isMostlyJapanese(line) {
   return japanese > 0 && japanese >= latin;
 }
 
-// What the sidebar calls a passage: a one-word title and an emoji for the gist,
-// falling back to the opening line for any passage not in the map (a newly
-// extracted one, say) so the rail is never blank.
-export function titleOf(passage) {
-  const named = PASSAGE_TITLES[passageKey(passage)];
-  return named ?? { title: previewOf(passage), emoji: null };
-}
-
 export function wordCountOf(passage) {
   return swapSegments(parsePassage(passage.with_furigana)).length;
 }
 
-// Groups passages into chapters, keeping their original indices — those are
+// Groups passages by textbook stage, keeping their original indices — those are
 // what the app selects by.
 export function buildCurriculum(passages) {
-  const chapters = [];
+  const stages = [];
 
   passages.forEach((passage, index) => {
-    const chapter = chapterOf(passage.section);
-    const type = exerciseTypeOf(passage.section);
-    let group = chapters.find((candidate) => candidate.chapter === chapter);
+    const stage = stageOf(passage);
+    const type = exerciseTypeOf(passage);
+    let group = stages.find((candidate) => candidate.stage === stage);
     if (!group) {
-      group = { chapter, types: [], passages: [] };
-      chapters.push(group);
+      group = { stage, types: [], passages: [] };
+      stages.push(group);
     }
     if (!group.types.includes(type)) {
       group.types.push(type);
     }
     group.passages.push({
       index,
-      chapter,
+      stage,
       type,
       ...titleOf(passage),
       preview: previewOf(passage),
@@ -93,12 +92,17 @@ export function buildCurriculum(passages) {
     });
   });
 
-  chapters.sort((a, b) => (a.chapter ?? Infinity) - (b.chapter ?? Infinity));
-  return chapters.map((group) => ({ ...group, label: labelFor(group) }));
+  stages.sort((a, b) => order(a.stage) - order(b.stage));
+  return stages.map((group) => ({ ...group, label: labelFor(group) }));
 }
 
-// A chapter of one kind of exercise says so; a mixed one just numbers itself.
+// "Stage 2-3" sorts after "Stage 1-8", and "Stage 2-10" after "Stage 2-9".
+function order(stage) {
+  const match = /(\d+)\s*-\s*(\d+)/.exec(stage ?? '');
+  return match ? Number(match[1]) * 1000 + Number(match[2]) : Number.MAX_SAFE_INTEGER;
+}
+
+// A stage with one kind of exercise says so; a mixed one just names itself.
 function labelFor(group) {
-  const name = group.chapter === null ? 'Other' : `Chapter ${group.chapter}`;
-  return group.types.length === 1 ? `${name} · ${group.types[0]}` : name;
+  return group.types.length === 1 ? `${group.stage} · ${group.types[0]}` : group.stage;
 }
