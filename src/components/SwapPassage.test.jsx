@@ -41,14 +41,27 @@ describe('reading the other way round', () => {
   test('shows the kanji and asks for the reading instead of offering choices', () => {
     render(<SwapPassage passage={passage} typing onAttempt={() => {}} />);
 
-    expect(screen.getByText('私')).toBeInTheDocument();
+    // Once in the passage, once above it in the field that answers it.
+    expect(screen.getAllByText('私')).toHaveLength(2);
     expect(screen.queryByText('わたし')).not.toBeInTheDocument();
     expect(tooltipOptions()).toHaveLength(0);
   });
 
-  test('aims at the first word, with somewhere to type', () => {
+  test('gives the passage one field, not one per word', () => {
     render(<SwapPassage passage={passage} typing onAttempt={() => {}} />);
+    expect(screen.getAllByRole('textbox')).toHaveLength(1);
     expect(screen.getByLabelText(/reading for 私/i)).toBeInTheDocument();
+  });
+
+  test('mirrors what is typed over the word being answered', () => {
+    render(<SwapPassage passage={passage} typing onAttempt={() => {}} />);
+
+    fireEvent.change(screen.getByLabelText(/reading for 私/i), { target: { value: 'wata' } });
+
+    // Every word has a furigana slot; only the one being answered is filled.
+    const slots = screen.getAllByTestId('reading-slot');
+    expect(slots[0]).toHaveTextContent('わた');
+    expect(slots.slice(1).every((slot) => slot.textContent === '')).toBe(true);
   });
 
   test('leaves every key to the answer being typed', () => {
@@ -71,7 +84,9 @@ describe('reading the other way round', () => {
       jest.advanceTimersByTime(1000);
     });
 
+    // The one field follows the passage to the next word.
     expect(screen.getByLabelText(/reading for 本/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('textbox')).toHaveLength(1);
     jest.useRealTimers();
   });
 });

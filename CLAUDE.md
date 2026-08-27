@@ -30,7 +30,7 @@ The Pages workflow publishes two builds from one deployment: `main` at `/`, and 
 Every passage is two exercises, tracked separately:
 
 - **かな → 漢字** (`DIRECTION.toKanji`) — the original: read the kana, pick the kanji from a tooltip of choices.
-- **漢字 → かな** (`DIRECTION.toReading`) — the kanji is on the page and the reader types its reading into the furigana slot above it. A correct reading is recognised the moment it's complete — there's nothing to submit, since only one string can be right. `Enter` offers a wrong answer deliberately (that's what counts a miss); `Tab` walks to the next word.
+- **漢字 → かな** (`DIRECTION.toReading`) — the kanji is on the page and the reader types its reading. Typing happens in **one field** (`ReadingComposer`), pinned above the passage, showing the word being answered at size; what's typed is mirrored small over that word where its furigana belongs. An input per word turned the line into a row of boxes and the passage stopped reading like text — `TypeWord` holds no field of its own. A correct reading is recognised the moment it's complete — there's nothing to submit, since only one string can be right. `Enter` offers a wrong answer deliberately (that's what counts a miss); `Tab` walks to the next word.
 
 Every event row carries `direction`, and derived state keys each passage by it, so finishing one direction says nothing about the other. Rows logged before the reading exercise existed have no `direction` and count as `to_kanji`.
 

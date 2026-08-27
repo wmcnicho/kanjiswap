@@ -1,9 +1,8 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { createRef } from 'react';
+import { act, render, screen } from '@testing-library/react';
 import TypeWord from './TypeWord';
 
 const word = { kanji: '私', reading: 'わたし' };
-
-const type = (text) => fireEvent.change(screen.getByLabelText(/reading for 私/i), { target: { value: text } });
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -13,71 +12,33 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-test('shows the kanji and a field where the furigana goes', () => {
+test('shows the kanji, with nothing above it yet', () => {
   render(<TypeWord {...word} active />);
   expect(screen.getByText('私')).toBeInTheDocument();
-  // A field the reader can see is also one an IME can draw into.
-  expect(screen.getByLabelText(/reading for 私/i)).toHaveValue('');
+  expect(screen.getByTestId('reading-slot')).toHaveTextContent('');
 });
 
-test('accepts a reading typed as kana', () => {
-  const onAttempt = jest.fn();
-  render(<TypeWord {...word} active onAttempt={onAttempt} />);
+test('mirrors what is being typed, small, where the furigana goes', () => {
+  const { rerender } = render(<TypeWord {...word} active pending='わた' />);
+  expect(screen.getByTestId('reading-slot')).toHaveTextContent('わた');
 
-  type('わたし');
-
-  expect(onAttempt).toHaveBeenCalledWith(true, 'わたし');
+  rerender(<TypeWord {...word} active pending='わたし' />);
+  expect(screen.getByTestId('reading-slot')).toHaveTextContent('わたし');
 });
 
-test('accepts one typed as romaji, and shows it as kana as it goes', () => {
-  const onAttempt = jest.fn();
-  render(<TypeWord {...word} active onAttempt={onAttempt} />);
-
-  type('wata');
-  expect(screen.getByLabelText(/reading for 私/i)).toHaveValue('わた');
-  expect(onAttempt).not.toHaveBeenCalled(); // not finished yet
-
-  type('watashi');
-  expect(onAttempt).toHaveBeenCalledWith(true, 'わたし');
+test('holds no field of its own — one at the top serves the passage', () => {
+  render(<TypeWord {...word} active pending='わ' />);
+  // An input per word turned the line into a row of boxes; the passage stopped
+  // reading like text.
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
 });
 
-test('needs no submit — a complete reading is simply right', () => {
-  const onAttempt = jest.fn();
-  render(<TypeWord {...word} active onAttempt={onAttempt} />);
+test('settles the reading above the kanji when the answer is right, then fades it', () => {
+  const ref = createRef();
+  render(<TypeWord {...word} ref={ref} active />);
 
-  type('watashi'); // no Enter pressed
-
-  expect(onAttempt).toHaveBeenCalledWith(true, 'わたし');
-});
-
-test('counts a wrong reading only when it is offered', () => {
-  const onAttempt = jest.fn();
-  render(<TypeWord {...word} active onAttempt={onAttempt} />);
-
-  type('わたく');
-  expect(onAttempt).not.toHaveBeenCalled(); // half-typed is not wrong yet
-
-  fireEvent.keyDown(screen.getByLabelText(/reading for 私/i), { key: 'Enter' });
-  expect(onAttempt).toHaveBeenCalledWith(false, 'わたく');
-});
-
-test('clears a wrong answer rather than leaving it to edit around', () => {
-  render(<TypeWord {...word} active onAttempt={() => {}} />);
-
-  type('わたく');
-  fireEvent.keyDown(screen.getByLabelText(/reading for 私/i), { key: 'Enter' });
   act(() => {
-    jest.advanceTimersByTime(600);
-  });
-
-  expect(screen.getByLabelText(/reading for 私/i)).toHaveValue('');
-});
-
-test('leaves the reading above the kanji, then lets it fade', () => {
-  render(<TypeWord {...word} active onAttempt={() => {}} />);
-
-  type('watashi');
-  act(() => {
+    ref.current.choose('わたし');
     jest.advanceTimersByTime(600);
   });
   expect(screen.getByTestId('reading-slot')).toHaveTextContent('わたし');
@@ -89,168 +50,21 @@ test('leaves the reading above the kanji, then lets it fade', () => {
   expect(screen.getByTestId('reading-slot')).toHaveStyle({ opacity: '0' });
 });
 
-test('gives a word answered in an earlier visit no input and no reading', () => {
+test('shows nothing new when the answer is wrong', () => {
+  const ref = createRef();
+  render(<TypeWord {...word} ref={ref} active />);
+
+  act(() => {
+    ref.current.choose('わたく');
+    jest.advanceTimersByTime(600);
+  });
+
+  expect(screen.getByTestId('reading-slot')).toHaveTextContent('');
+  expect(screen.getByText('私')).toBeInTheDocument();
+});
+
+test('gives a word answered in an earlier visit its reading, faded out', () => {
   render(<TypeWord {...word} solved />);
-
-  expect(screen.queryByLabelText(/reading for 私/i)).not.toBeInTheDocument();
+  expect(screen.getByTestId('reading-slot')).toHaveTextContent('わたし');
   expect(screen.getByTestId('reading-slot')).toHaveStyle({ opacity: '0' });
-});
-
-test('walks the passage with Tab rather than the page', () => {
-  const onStep = jest.fn();
-  render(<TypeWord {...word} active onStep={onStep} />);
-  const input = screen.getByLabelText(/reading for 私/i);
-
-  fireEvent.keyDown(input, { key: 'Tab' });
-  expect(onStep).toHaveBeenCalledWith(1);
-
-  fireEvent.keyDown(input, { key: 'Tab', shiftKey: true });
-  expect(onStep).toHaveBeenCalledWith(-1);
-});
-
-// What a Japanese IME does: keystrokes go into a composition, the text on
-// screen is provisional, and Enter commits it. jsdom fires none of this on its
-// own, so the events are dispatched the way a browser would.
-describe('typing with a Japanese IME', () => {
-  const input = () => screen.getByLabelText(/reading for 私/i);
-
-  function compose(text, { commitWith = 'compositionend' } = {}) {
-    fireEvent.compositionStart(input());
-    fireEvent.change(input(), { target: { value: text } });
-    if (commitWith === 'enter') {
-      // The Enter that commits the composition, which the browser marks.
-      fireEvent.keyDown(input(), { key: 'Enter', keyCode: 229 });
-    }
-    fireEvent.compositionEnd(input(), { target: { value: text } });
-  }
-
-  test('accepts a reading committed from a composition', () => {
-    const onAttempt = jest.fn();
-    render(<TypeWord {...word} active onAttempt={onAttempt} />);
-
-    compose('わたし');
-
-    expect(onAttempt).toHaveBeenCalledWith(true, 'わたし');
-  });
-
-  test('does not count the Enter that commits the composition as an answer', () => {
-    const onAttempt = jest.fn();
-    render(<TypeWord {...word} active onAttempt={onAttempt} />);
-
-    compose('わたし', { commitWith: 'enter' });
-
-    // That Enter finished the word; reading it as "I offer this" marked the
-    // reader wrong at the moment they got it right.
-    expect(onAttempt).not.toHaveBeenCalledWith(false, expect.anything());
-    expect(onAttempt).toHaveBeenCalledWith(true, 'わたし');
-  });
-
-  test('leaves the text alone while the composition is still open', () => {
-    render(<TypeWord {...word} active onAttempt={() => {}} />);
-
-    fireEvent.compositionStart(input());
-    fireEvent.change(input(), { target: { value: 'わた' } });
-
-    // Untouched: rewriting it here resets the IME's own buffer.
-    expect(input()).toHaveValue('わた');
-  });
-
-  test('still offers a wrong answer on a plain Enter', () => {
-    const onAttempt = jest.fn();
-    render(<TypeWord {...word} active onAttempt={onAttempt} />);
-
-    compose('わたく');
-    fireEvent.keyDown(input(), { key: 'Enter' });
-
-    expect(onAttempt).toHaveBeenCalledWith(false, 'わたく');
-  });
-});
-
-test('accepts the reading of a longer word typed as romaji', () => {
-  const onAttempt = jest.fn();
-  render(<TypeWord kanji='一年生' reading='いちねんせい' active onAttempt={onAttempt} />);
-
-  fireEvent.change(screen.getByLabelText(/reading for 一年生/i), { target: { value: 'ichinensei' } });
-
-  expect(onAttempt).toHaveBeenCalledWith(true, 'いちねんせい');
-});
-
-test('accepts nn for ん, which is how it is typed', () => {
-  const onAttempt = jest.fn();
-  render(<TypeWord kanji='一年生' reading='いちねんせい' active onAttempt={onAttempt} />);
-
-  fireEvent.change(screen.getByLabelText(/reading for 一年生/i), { target: { value: 'ichinennsei' } });
-
-  expect(onAttempt).toHaveBeenCalledWith(true, 'いちねんせい');
-});
-
-test('takes what was typed when the reader moves on without committing it', () => {
-  const onAttempt = jest.fn();
-  render(<TypeWord {...word} active onAttempt={onAttempt} />);
-  const field = screen.getByLabelText(/reading for 私/i);
-
-  fireEvent.compositionStart(field);
-  fireEvent.change(field, { target: { value: 'わたし' } });
-  fireEvent.blur(field, { target: { value: 'わたし' } });
-
-  // Typed correctly but never committed; losing it silently is the worst answer.
-  expect(onAttempt).toHaveBeenCalledWith(true, 'わたし');
-});
-
-test('keeps the field the reader is typing into visible', () => {
-  render(<TypeWord {...word} active />);
-  const field = screen.getByLabelText(/reading for 私/i);
-
-  // The previous version hid the input under the word at opacity 0, which left
-  // an IME composing into something nobody could see.
-  expect(field).toBeVisible();
-  expect(window.getComputedStyle(field).opacity).not.toBe('0');
-});
-
-test('does not give away how long the reading is', () => {
-  render(<TypeWord kanji='一年生' reading='いちねんせい' active />);
-  const field = screen.getByLabelText(/reading for 一年生/i);
-
-  // Six kana; a field sized to fit them would be half the answer.
-  expect(window.getComputedStyle(field).width).toBe('3ch');
-});
-
-// The field feeds its own converted value back in on every keystroke, which is
-// how いちねんせい came out as いちんえんせい: a trailing n committed to ん early,
-// and nothing could take it back.
-function typeOneKeyAtATime(label, romaji) {
-  const field = screen.getByLabelText(label);
-  let value = '';
-  for (const character of romaji) {
-    value = `${field.value}${character}`;
-    fireEvent.change(field, { target: { value } });
-  }
-}
-
-test('accepts a reading typed one key at a time, not just pasted', () => {
-  const onAttempt = jest.fn();
-  render(<TypeWord kanji='一年生' reading='いちねんせい' active onAttempt={onAttempt} />);
-
-  typeOneKeyAtATime(/reading for 一年生/i, 'ichinensei');
-
-  expect(onAttempt).toHaveBeenCalledWith(true, 'いちねんせい');
-});
-
-test('accepts nn for ん typed one key at a time', () => {
-  const onAttempt = jest.fn();
-  render(<TypeWord kanji='一年生' reading='いちねんせい' active onAttempt={onAttempt} />);
-
-  typeOneKeyAtATime(/reading for 一年生/i, 'ichinennsei');
-
-  expect(onAttempt).toHaveBeenCalledWith(true, 'いちねんせい');
-});
-
-test('accepts a reading that ends in ん, typed with a single n', () => {
-  const onAttempt = jest.fn();
-  render(<TypeWord kanji='本' reading='ほん' active onAttempt={onAttempt} />);
-
-  typeOneKeyAtATime(/reading for 本/i, 'hon');
-
-  expect(onAttempt).toHaveBeenCalledWith(true, 'ほん');
-  expect(screen.getByLabelText(/reading for 本/i)).toHaveValue('ほん'); // not ほn
 });

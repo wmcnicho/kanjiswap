@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Box, Typography } from '@mui/material';
 import SwapWord from './SwapWord';
 import TypeWord from './TypeWord';
+import ReadingComposer from './ReadingComposer';
 import { KEY_TO_INDEX } from './SwapOptions';
 import { parsePassage, buildSwapOptions, swapSegments } from '../utils/passage';
 import { wordKey } from '../utils/progress';
@@ -59,6 +60,9 @@ function SwapPassage({
   // The choices themselves only appear once the reader is playing, rather than
   // opening a popup over an untouched passage.
   const [playing, setPlaying] = useState(false);
+  // What's being typed for the word on hand, in the reading direction. It lives
+  // here rather than in the word so one field at the top can serve them all.
+  const [typed, setTyped] = useState('');
   const usingKeyboard = useRef(false);
   const words = useRef({});
   const advance = useRef(null);
@@ -102,6 +106,22 @@ function SwapPassage({
     const to = (at + direction + unsolved.length) % unsolved.length;
     setChosenKey(unsolved[to].key);
   }, [unsolved, activeKey]);
+
+  // A fresh word starts with an empty field.
+  useEffect(() => {
+    setTyped('');
+  }, [activeKey]);
+
+  // The composer offers a reading; the word decides what became of it, exactly
+  // as a clicked choice does in the other direction.
+  const offerReading = (text) => {
+    if (!activeSegment) {
+      return;
+    }
+    handleAttempt(activeSegment, text === activeSegment.reading, text);
+    words.current[activeSegment.key]?.choose(text);
+    setTyped('');
+  };
 
   const handleAttempt = (segment, correct, chosen) => {
     onAttempt?.(segment, correct, chosen);
@@ -171,7 +191,7 @@ function SwapPassage({
       }
     : { maxWidth: '700px', width: '100%' };
 
-  return (
+  const body = (
     <Box sx={layout}>
       {lines.map((segments, lineIndex) => (
         <Typography key={lineIndex} variant='h5' sx={{ lineHeight: 2.5, minHeight: '1em' }}>
@@ -187,9 +207,8 @@ function SwapPassage({
                 variant='h5'
                 solved={isSolved(segment.key)}
                 active={segment.key === activeKey}
-                onAttempt={(correct, answer) => handleAttempt(segment, correct, answer)}
+                pending={segment.key === activeKey ? typed : ''}
                 onActivate={() => setChosenKey(segment.key)}
-                onStep={step}
               />
             ) : (
               <SwapWord
@@ -223,6 +242,27 @@ function SwapPassage({
           )}
         </Typography>
       ))}
+    </Box>
+  );
+
+  if (!typing) {
+    return body;
+  }
+
+  // One field, above the passage, serving whichever word is on hand.
+  return (
+    <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      {activeSegment && (
+        <ReadingComposer
+          kanji={activeSegment.kanji}
+          reading={activeSegment.reading}
+          value={typed}
+          onValueChange={setTyped}
+          onOffer={offerReading}
+          onStep={step}
+        />
+      )}
+      {body}
     </Box>
   );
 }
