@@ -6,6 +6,7 @@ import PassageProgress from './components/PassageProgress';
 import PassageNav from './components/PassageNav';
 import ReadingControls from './components/ReadingControls';
 import KanjiMark from './components/KanjiMark';
+import Score from './components/Score';
 import { DEFAULT_FONT, buildTheme } from './theme';
 import passages from './data/passages.json';
 import { buildCurriculum, wordCountOf } from './utils/curriculum';
@@ -125,8 +126,9 @@ function App() {
         <KanjiMark size={38} />
         <Box>
           <Typography variant='subtitle1' fontWeight={500} lineHeight={1.2}>KanjiSwap</Typography>
-          <Typography variant='caption' color='text.secondary'>
-            {state.totals.points} points · {state.totals.passagesCompleted} finished
+          <Typography variant='caption' color='text.secondary' component='div'>
+            <Score value={state.totals.points} label='points' />
+            {` · ${state.totals.passagesCompleted} finished`}
           </Typography>
         </Box>
       </Toolbar>

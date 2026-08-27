@@ -24,7 +24,9 @@ test('reports what is left mid-passage and the result once done', () => {
   expect(screen.getByText(/2\/8 swapped/)).toBeInTheDocument();
 
   rerender(<PassageProgress stats={statsFor({ solved: 8, complete: true, points: 96 })} totals={totals} onTryAgain={() => {}} />);
-  expect(screen.getByText(/Passage complete — 96 points/)).toBeInTheDocument();
+  // The score is its own element now, so the line reads across two nodes.
+  expect(screen.getByText(/Passage complete/)).toBeInTheDocument();
+  expect(screen.getByTestId('score-value')).toHaveTextContent('96');
 });
 
 test('mentions earlier runs once there is more than one', () => {

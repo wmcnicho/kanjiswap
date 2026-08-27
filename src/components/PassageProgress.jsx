@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Button, Typography } from '@mui/material';
+import Score from './Score';
 
 // The tally under a passage. Mid-passage it reports what's left; once the
 // passage is finished it reports the run that just ended and offers another go.
@@ -8,8 +9,9 @@ function PassageProgress({ stats, totals, onTryAgain }) {
 
   return (
     <Box display='flex' flexDirection='column' alignItems='center' gap={1} mt={3}>
-      <Typography variant='body2' color={complete ? 'success.main' : 'text.secondary'}>
-        {complete ? `Passage complete — ${points} points` : `${solved}/${total} swapped · ${points} points`}
+      <Typography variant='body2' color={complete ? 'success.main' : 'text.secondary'} component='div'>
+        {complete ? 'Passage complete — ' : `${solved}/${total} swapped · `}
+        <Score value={points} label='points' showDelta />
         {misses > 0 && ` · ${misses} wrong ${misses === 1 ? 'guess' : 'guesses'}`}
         {totals.streak > 1 && ` · ${totals.streak} in a row`}
       </Typography>
@@ -27,7 +29,7 @@ function PassageProgress({ stats, totals, onTryAgain }) {
         </>
       )}
 
-      <Typography variant='caption' color='text.secondary'>
+      <Typography variant='caption' color='text.secondary' component='div'>
         {totals.points} points overall · saved in this browser only
       </Typography>
     </Box>
