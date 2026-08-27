@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import SwapPassage from './SwapPassage';
 import { OPTION_KEYS } from './SwapOptions';
@@ -31,6 +32,81 @@ test('runs top to bottom, right to left, when asked', () => {
   // Block flow turns with the writing mode, so lines stack right to left.
   expect(container.firstChild).toHaveStyle({ writingMode: 'vertical-rl' });
 });
+
+function activeWord() {
+  return document.querySelector('[data-active]')?.textContent ?? null;
+}
+
+describe('finding your place', () => {
+  test('the next word to solve is marked from the start', () => {
+    render(<SwapPassage passage={passage} onAttempt={() => {}} />);
+    expect(activeWord()).toBe('わたし');
+  });
+
+  test('marks it without opening choices over an untouched passage', () => {
+    render(<SwapPassage passage={passage} onAttempt={() => {}} />);
+    expect(tooltipOptions()).toHaveLength(0);
+  });
+
+  test('marks the next unsolved word, not the next word', () => {
+    const solved = new Set(['0.0.私']);
+    render(<SwapPassage passage={passage} isSolved={(key) => solved.has(key)} onAttempt={() => {}} />);
+    expect(activeWord()).toBe('ほん');
+  });
+});
+
+describe('stepping between words', () => {
+  test.each([
+    ['e', 'ほん'],
+    ['ArrowRight', 'ほん'],
+    ['ArrowDown', 'ほん'],
+    ['q', 'はな'],
+    ['ArrowLeft', 'はな'],
+    ['ArrowUp', 'はな'],
+  ])('%s moves to %s', (key, expected) => {
+    render(<SwapPassage passage={passage} onAttempt={() => {}} />);
+    fireEvent.keyDown(window, { key });
+    expect(activeWord()).toBe(expected);
+  });
+
+  test('follows the writing direction when the passage runs vertically', () => {
+    render(<SwapPassage passage={passage} vertical onAttempt={() => {}} />);
+
+    // Vertical Japanese reads downwards, then leftwards, so those are forwards.
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    expect(activeWord()).toBe('ほん');
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    expect(activeWord()).toBe('わたし');
+  });
+
+  test('wraps round the words still to be solved', () => {
+    render(<SwapPassage passage={passage} onAttempt={() => {}} />);
+    fireEvent.keyDown(window, { key: 'q' });
+    expect(activeWord()).toBe('はな'); // backwards from the first word is the last one
+  });
+
+  test('stepping opens the choices for the word it lands on', () => {
+    render(<SwapPassage passage={passage} onAttempt={() => {}} />);
+    fireEvent.keyDown(window, { key: 'e' });
+    expect(tooltipOptions()).toContain('本');
+  });
+});
+
+// Mirrors what the app does: solved words come back down as props.
+function PlayablePassage() {
+  const [solved, setSolved] = useState(new Set());
+  return (
+    <SwapPassage
+      passage={passage}
+      isSolved={(key) => solved.has(key)}
+      onAttempt={(segment, correct) => {
+        if (correct) {
+          setSolved((current) => new Set(current).add(segment.key));
+        }
+      }}
+    />
+  );
+}
 
 describe('playing by touch', () => {
   test('a tap opens the choices', () => {
@@ -141,6 +217,22 @@ describe('playing by keyboard', () => {
     fireEvent.keyDown(screen.getByLabelText(/somewhere to type/i), { key: 'a' });
 
     expect(tooltipOptions()).toHaveLength(0);
+  });
+
+  test('finishes a whole passage without a single click', () => {
+    render(<PlayablePassage />);
+
+    fireEvent.keyDown(window, { key: 'a' }); // show the choices
+    for (const kanji of ['私', '本', '読', '花']) {
+      expect(tooltipOptions()).toContain(kanji);
+      pressKeyFor(kanji);
+      act(() => {
+        jest.advanceTimersByTime(1000); // the flash, then the hand-off
+      });
+    }
+
+    expect(activeWord()).toBeNull(); // nothing left to aim at
+    expect(screen.getByText('花')).toBeInTheDocument();
   });
 
   test('offers the keys to anyone who hovers a word without choosing', () => {

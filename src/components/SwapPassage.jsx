@@ -8,6 +8,14 @@ import { wordKey } from '../utils/progress';
 // Long enough for the green flash to register before the next word opens.
 const ADVANCE_MS = 620;
 
+// Stepping between words. Reading order runs left-to-right, or top-to-bottom
+// and then leftwards when the passage is set vertically, and the arrow keys
+// follow whichever is in force.
+const STEP_KEYS = {
+  horizontal: { next: ['e', 'arrowright', 'arrowdown'], previous: ['q', 'arrowleft', 'arrowup'] },
+  vertical: { next: ['e', 'arrowdown', 'arrowleft'], previous: ['q', 'arrowup', 'arrowright'] },
+};
+
 function SwapPassage({
   passage,
   vertical = false,
@@ -37,13 +45,20 @@ function SwapPassage({
   // Every swappable word in reading order — the order play moves through.
   const order = useMemo(() => lines.flat().filter((segment) => segment.type === 'swap'), [lines]);
 
-  // The word the keyboard is aimed at, and whose choices are open.
-  const [activeKey, setActiveKey] = useState(null);
+  // The word the keyboard is aimed at. Something is always aimed at — the next
+  // word still to be solved, until the reader picks a different one — so the
+  // passage can be played from the first keystroke without hunting for a start.
+  const [chosenKey, setChosenKey] = useState(null);
+  // The choices themselves only appear once the reader is playing, rather than
+  // opening a popup over an untouched passage.
+  const [playing, setPlaying] = useState(false);
   const usingKeyboard = useRef(false);
   const words = useRef({});
   const advance = useRef(null);
 
-  const activeSegment = order.find((segment) => segment.key === activeKey) ?? null;
+  const unsolved = order.filter((segment) => !isSolved(segment.key));
+  const activeSegment = unsolved.find((segment) => segment.key === chosenKey) ?? unsolved[0] ?? null;
+  const activeKey = activeSegment?.key ?? null;
 
   useEffect(() => () => clearTimeout(advance.current), []);
 
@@ -55,46 +70,64 @@ function SwapPassage({
     return rest.find((segment) => segment.key !== key && !isSolved(segment.key))?.key ?? null;
   }, [order, isSolved]);
 
+  // Steps to the next or previous word still to be solved, wrapping round.
+  const step = useCallback((direction) => {
+    if (unsolved.length === 0) {
+      return;
+    }
+    const at = unsolved.findIndex((segment) => segment.key === activeKey);
+    const to = (at + direction + unsolved.length) % unsolved.length;
+    setChosenKey(unsolved[to].key);
+  }, [unsolved, activeKey]);
+
   const handleAttempt = (segment, correct, chosen) => {
     onAttempt?.(segment, correct, chosen);
     if (correct) {
       // Carry on to the next word so play keeps its rhythm; a wrong guess stays
       // put, because the word hasn't been answered yet.
       clearTimeout(advance.current);
-      advance.current = setTimeout(() => setActiveKey(nextAfter(segment.key)), ADVANCE_MS);
+      advance.current = setTimeout(() => setChosenKey(nextAfter(segment.key)), ADVANCE_MS);
     }
   };
 
   useEffect(() => {
+    const steps = STEP_KEYS[vertical ? 'vertical' : 'horizontal'];
+
     const handleKey = (event) => {
       if (event.metaKey || event.ctrlKey || event.altKey || isTyping(event.target)) {
         return;
       }
-      const index = KEY_TO_INDEX[event.key.toLowerCase()];
-      if (index === undefined) {
+      const key = event.key.toLowerCase();
+      const index = KEY_TO_INDEX[key];
+      const stepping = steps.next.includes(key) ? 1 : steps.previous.includes(key) ? -1 : 0;
+      if (index === undefined && stepping === 0) {
         return;
       }
-      const target = activeSegment ?? order.find((segment) => !isSolved(segment.key));
-      if (!target) {
-        return;
+      if (!activeSegment) {
+        return; // Nothing left to answer
       }
-      event.preventDefault();
+      event.preventDefault(); // Arrow keys would otherwise scroll the passage away
       usingKeyboard.current = true;
       onRevealHints?.();
 
-      if (!activeSegment) {
-        setActiveKey(target.key); // The first key press picks a word to play, rather than answering blind
+      if (stepping !== 0) {
+        setPlaying(true);
+        step(stepping);
         return;
       }
-      const option = target.options[index];
+      if (!playing) {
+        setPlaying(true); // The first key press shows the choices rather than answering blind
+        return;
+      }
+      const option = activeSegment.options[index];
       if (option) {
-        words.current[target.key]?.choose(option);
+        words.current[activeSegment.key]?.choose(option);
       }
     };
 
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [activeSegment, order, isSolved, onRevealHints]);
+  }, [activeSegment, playing, step, vertical, onRevealHints]);
 
   // Vertical Japanese runs top-to-bottom, and successive lines stack to the
   // left — which `vertical-rl` gives for free, since block flow turns with the
@@ -128,14 +161,18 @@ function SwapPassage({
                 placement={vertical ? 'left' : 'bottom'}
                 solved={isSolved(segment.key)}
                 active={segment.key === activeKey}
+                choicesOpen={playing}
                 hintsVisible={hintsVisible}
                 onAttempt={(correct, chosen) => handleAttempt(segment, correct, chosen)}
-                onActivate={() => setActiveKey(segment.key)}
+                onActivate={() => {
+                  setChosenKey(segment.key);
+                  setPlaying(true);
+                }}
                 onDeactivate={() => {
                   // Once someone is playing by keyboard, moving the mouse away
                   // shouldn't close the word they're aiming at.
                   if (!usingKeyboard.current) {
-                    setActiveKey((current) => (current === segment.key ? null : current));
+                    setPlaying(false);
                   }
                 }}
                 onHintDelayElapsed={onRevealHints}

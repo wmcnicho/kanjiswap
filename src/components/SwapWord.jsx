@@ -15,6 +15,7 @@ const SwapWord = forwardRef(function SwapWord({
   solved = false,
   placement = 'bottom',
   active = false,
+  choicesOpen = false,
   hintsVisible = false,
   onAttempt,
   onActivate,
@@ -45,12 +46,12 @@ const SwapWord = forwardRef(function SwapWord({
 
   // The reader has been hovering a while without choosing: show them the keys.
   useEffect(() => {
-    if (!active || hintsVisible) {
+    if (!active || !choicesOpen || hintsVisible) {
       return undefined;
     }
     const timer = setTimeout(() => onHintDelayElapsed?.(), HINT_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [active, hintsVisible, onHintDelayElapsed]);
+  }, [active, choicesOpen, hintsVisible, onHintDelayElapsed]);
 
   const succeed = (clickedItem) => {
     onAttempt?.(true, clickedItem);
@@ -114,9 +115,10 @@ const SwapWord = forwardRef(function SwapWord({
       ref={wordRef}
       component='span'
       variant={variant}
+      data-active={active || undefined}
       // A tap has to open the choices. MUI only opens a tooltip on touch after
       // a long press, which is not something anyone will guess.
-      onClick={() => (active ? onDeactivate?.() : onActivate?.())}
+      onClick={() => (active && choicesOpen ? onDeactivate?.() : onActivate?.())}
       sx={{
         color,
         cursor: 'pointer',
@@ -140,7 +142,7 @@ const SwapWord = forwardRef(function SwapWord({
 
   return (
     <Tooltip
-      open={active}
+      open={active && choicesOpen}
       onOpen={() => onActivate?.()}
       onClose={() => onDeactivate?.()}
       title={<SwapOptions options={options} onChoose={choose} hintsVisible={hintsVisible} />}

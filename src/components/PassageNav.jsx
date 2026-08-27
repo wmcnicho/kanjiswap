@@ -9,8 +9,8 @@ import {
   Typography,
 } from '@mui/material';
 
-// The learning path: textbook stages that collapse, each passage showing how
-// far through it the student is.
+// The learning path: stages that collapse, the chapters within them, and each
+// passage showing how far through it the student is.
 function PassageNav({ stages, selectedIndex, statsFor, onSelect }) {
   const stageOfSelected = stages.find((stage) =>
     stage.passages.some((passage) => passage.index === selectedIndex)
@@ -38,7 +38,7 @@ function PassageNav({ stages, selectedIndex, statsFor, onSelect }) {
         const done = stage.passages.filter((passage) => isFinished(statsFor(passage))).length;
 
         return (
-          <Box key={stage.label} sx={{ mb: 0.5 }}>
+          <Box key={stage.stage} sx={{ mb: 0.5 }}>
             <ListItemButton onClick={() => toggleStage(stage.stage)} sx={{ py: 0.75 }}>
               <ListItemText
                 primary={`${open ? '▾' : '▸'} ${stage.label}`}
@@ -49,36 +49,55 @@ function PassageNav({ stages, selectedIndex, statsFor, onSelect }) {
             </ListItemButton>
 
             <Collapse in={open} timeout='auto' unmountOnExit>
-              {stage.passages.map((passage) => {
-                const stats = statsFor(passage);
-                const finished = isFinished(stats);
-                return (
-                  <ListItemButton
-                    key={passage.index}
-                    selected={passage.index === selectedIndex}
-                    onClick={() => onSelect(passage.index)}
-                    sx={{ pl: 3, py: 0.5, display: 'block' }}
+              {stage.chapters.map((chapter) => (
+                <Box key={chapter.chapter}>
+                  <Typography
+                    variant='caption'
+                    color='text.secondary'
+                    sx={{ display: 'block', pl: 3, pt: 1, pb: 0.25, letterSpacing: '0.08em' }}
                   >
-                    <Typography
-                      variant='body2'
-                      noWrap
-                      color={finished ? 'success.main' : 'text.primary'}
-                    >
-                      {passage.emoji && (
-                        <Box component='span' sx={{ mr: 0.75 }} aria-hidden='true'>{passage.emoji}</Box>
-                      )}
-                      <Box component='span'>{passage.title}</Box>
-                      {finished && <Box component='span' aria-label='finished'> ✓</Box>}
-                    </Typography>
-                    <LinearProgress
-                      variant='determinate'
-                      value={Math.round(stats.fraction * 100)}
-                      color={finished ? 'success' : 'primary'}
-                      sx={{ height: 4, borderRadius: 2, mt: 0.5 }}
-                    />
-                  </ListItemButton>
-                );
-              })}
+                    {chapter.chapter}
+                  </Typography>
+
+                  {chapter.passages.map((passage) => {
+                    const stats = statsFor(passage);
+                    const finished = isFinished(stats);
+                    return (
+                      <ListItemButton
+                        key={passage.index}
+                        selected={passage.index === selectedIndex}
+                        onClick={() => onSelect(passage.index)}
+                        sx={{ pl: 3, py: 0.5, display: 'block' }}
+                      >
+                        <Typography
+                          variant='body2'
+                          noWrap
+                          color={finished ? 'success.main' : 'text.primary'}
+                        >
+                          {passage.emoji && (
+                            <Box component='span' sx={{ mr: 0.75 }} aria-hidden='true'>{passage.emoji}</Box>
+                          )}
+                          <Box component='span'>{passage.title}</Box>
+                          {/* Named only when it breaks the pattern; saying
+                              "discourse practice" fourteen times says nothing. */}
+                          {passage.note && (
+                            <Box component='span' sx={{ color: 'text.secondary', fontSize: '0.75em', ml: 0.75 }}>
+                              {passage.note}
+                            </Box>
+                          )}
+                          {finished && <Box component='span' aria-label='finished'> ✓</Box>}
+                        </Typography>
+                        <LinearProgress
+                          variant='determinate'
+                          value={Math.round(stats.fraction * 100)}
+                          color={finished ? 'success' : 'primary'}
+                          sx={{ height: 4, borderRadius: 2, mt: 0.5 }}
+                        />
+                      </ListItemButton>
+                    );
+                  })}
+                </Box>
+              ))}
             </Collapse>
           </Box>
         );

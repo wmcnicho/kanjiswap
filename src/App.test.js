@@ -55,16 +55,17 @@ test('shows the mark at the top of the rail', () => {
   expect(screen.getAllByRole('img', { name: /kanjiswap/i }).length).toBeGreaterThan(0);
 });
 
-test('lists the learning path as collapsible textbook stages', () => {
+test('lists the learning path as collapsible stages holding their chapters', () => {
   render(<App />);
-  expect(screen.getAllByText(/Stage 1-3/).length).toBeGreaterThan(0);
-  expect(screen.getAllByText(/Stage 2-8/).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/Stage 1/).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/Stage 2/).length).toBeGreaterThan(0);
+  // Chapters sit inside the open stage, named by number alone.
+  expect(screen.getAllByText('1-3').length).toBeGreaterThan(0);
 });
 
 test('opens the stage holding the passage on screen', () => {
   render(<App />);
-  // The first passage's stage starts expanded, so its title is visible.
-  const [firstStage] = screen.getAllByText(/Stage 1-3/);
+  const [firstStage] = screen.getAllByText(/Stage 1/);
   expect(firstStage.textContent).toMatch(/▾/);
 });
 

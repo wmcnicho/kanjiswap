@@ -21,7 +21,7 @@ function swapIn(container) {
 }
 
 test('shows the reading over the kanji it just swapped in, then lets it fade', () => {
-  const { container } = render(<SwapWord {...word} active />);
+  const { container } = render(<SwapWord {...word} active choicesOpen />);
 
   swapIn(container);
 
@@ -36,7 +36,7 @@ test('shows the reading over the kanji it just swapped in, then lets it fade', (
 });
 
 test('keeps the faded reading in the layout so the line does not shift', () => {
-  const { container } = render(<SwapWord {...word} active />);
+  const { container } = render(<SwapWord {...word} active choicesOpen />);
   swapIn(container);
   act(() => {
     jest.advanceTimersByTime(2500);

@@ -1,4 +1,4 @@
-import { buildCurriculum, exerciseTypeOf, previewOf, stageOf, titleOf, wordCountOf } from './curriculum';
+import { buildCurriculum, chapterOf, exerciseTypeOf, previewOf, qualifierOf, stageGroupOf, stageOf, titleOf, wordCountOf } from './curriculum';
 import passages from '../data/passages.json';
 
 const passage = (fields) => ({
@@ -16,33 +16,47 @@ test('normalizes the exercise name for display', () => {
   expect(exerciseTypeOf(passage({ exercise: 'Reading practices (sentences)' }))).toBe('Reading Practice');
 });
 
-test('groups passages by stage, keeping their original indices', () => {
-  const stages = buildCurriculum([
-    passage({ stage: 'Stage 2-3', exercise: 'Discourse practice (reading)' }),
-    passage({ stage: 'Stage 1-5', exercise: 'Reading practice (sentences)' }),
-    passage({ stage: 'Stage 1-5', exercise: 'Reading practice (sentences)' }),
-  ]);
-
-  expect(stages.map((stage) => stage.stage)).toEqual(['Stage 1-5', 'Stage 2-3']);
-  expect(stages[0].passages.map((item) => item.index)).toEqual([1, 2]);
-  expect(stages[0].label).toBe('Stage 1-5 · Reading Practice');
+test('splits a stage label into the stage and the chapter within it', () => {
+  expect(stageGroupOf(passage({ stage: 'Stage 2-3' }))).toBe('Stage 2');
+  expect(chapterOf(passage({ stage: 'Stage 2-3' }))).toBe('2-3');
 });
 
-test('orders stages by number, not alphabetically', () => {
+test('groups chapters under their stage, keeping original indices', () => {
   const stages = buildCurriculum([
-    passage({ stage: 'Stage 2-10' }),
-    passage({ stage: 'Stage 2-2' }),
+    passage({ stage: 'Stage 2-3' }),
+    passage({ stage: 'Stage 1-5' }),
+    passage({ stage: 'Stage 1-5' }),
     passage({ stage: 'Stage 1-8' }),
   ]);
-  expect(stages.map((stage) => stage.stage)).toEqual(['Stage 1-8', 'Stage 2-2', 'Stage 2-10']);
+
+  expect(stages.map((stage) => stage.stage)).toEqual(['Stage 1', 'Stage 2']);
+  expect(stages[0].chapters.map((chapter) => chapter.chapter)).toEqual(['1-5', '1-8']);
+  expect(stages[0].chapters[0].passages.map((item) => item.index)).toEqual([1, 2]);
+  expect(stages[0].passages).toHaveLength(3); // the stage still knows all of its own
 });
 
-test('names a stage of mixed exercises by the stage alone', () => {
+test('orders chapters by number, not alphabetically', () => {
   const [stage] = buildCurriculum([
-    passage({ stage: 'Stage 1-3', exercise: 'Discourse practice (reading)' }),
-    passage({ stage: 'Stage 1-3', exercise: 'Reading practice (sentences)' }),
+    passage({ stage: 'Stage 2-10' }),
+    passage({ stage: 'Stage 2-2' }),
+    passage({ stage: 'Stage 2-9' }),
   ]);
-  expect(stage.label).toBe('Stage 1-3');
+  expect(stage.chapters.map((chapter) => chapter.chapter)).toEqual(['2-2', '2-9', '2-10']);
+});
+
+test('names an exercise only where it breaks the pattern', () => {
+  const stages = buildCurriculum([
+    passage({ stage: 'Stage 1-3', exercise: 'Discourse practice (reading)' }),
+    passage({ stage: 'Stage 1-4', exercise: 'Discourse practice (reading)' }),
+    passage({ stage: 'Stage 1-5', exercise: 'Reading practice (sentences)' }),
+  ]);
+  const notes = stages[0].passages.map((item) => item.note);
+  // Repeating "discourse practice" on every row would say nothing at all.
+  expect(notes).toEqual([null, null, 'sentences']);
+});
+
+test('reads the distinguishing word out of an exercise name', () => {
+  expect(qualifierOf(passage({ exercise: 'Reading practice (sentences)' }))).toBe('sentences');
 });
 
 test('previews a passage as the student sees it, in kana', () => {
@@ -73,11 +87,13 @@ describe('the shipped passages', () => {
     }
   });
 
-  test('are grouped one stage per chapter, not all under one heading', () => {
+  test('are filed under the chapter they came from, not all under one heading', () => {
     // The old data had ten passages from ten chapters all labelled "3:".
     const stages = buildCurriculum(passages);
-    expect(stages.length).toBeGreaterThan(5);
-    expect(Math.max(...stages.map((stage) => stage.passages.length))).toBeLessThan(4);
+    const chapters = stages.flatMap((stage) => stage.chapters);
+    expect(stages.map((stage) => stage.stage)).toEqual(['Stage 1', 'Stage 2']);
+    expect(chapters.length).toBeGreaterThan(8);
+    expect(Math.max(...chapters.map((chapter) => chapter.passages.length))).toBeLessThan(4);
   });
 
   test('carry no vocabulary-table debris', () => {
