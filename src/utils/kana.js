@@ -104,11 +104,17 @@ function isSokuon(lower) {
 }
 
 // A lone "n" becomes ん once it can't turn into な, に, にゃ and so on — which
-// is at the end of what's been typed, or before another consonant.
+// is before another consonant, or doubled.
+//
+// At the *end* of what's been typed it stays an "n". Committing it there would
+// be a guess, and since every keystroke rewrites the field, a wrong guess can
+// never be taken back: "ichin" would fix いちん in place, and the "e" that was
+// about to make ねんせい can only add to it. An IME holds the n pending for the
+// same reason. `finalizeKana` is what settles it.
 function isStandaloneN(lower) {
   const next = lower[1];
   if (next === undefined) {
-    return true;
+    return false;
   }
   if (next === 'n') {
     return true;
@@ -118,6 +124,15 @@ function isStandaloneN(lower) {
 
 function startsSyllable(character) {
   return character !== undefined && (VOWELS.includes(character) || character === 'y');
+}
+
+// Settles a reading that is being offered as final: a trailing "n" has nothing
+// left to become, so it becomes ん. Everything else is already converted.
+export function finalizeKana(text) {
+  const kana = toKana(text);
+  return kana.endsWith('n') || kana.endsWith('N')
+    ? `${kana.slice(0, -1)}ん`
+    : kana;
 }
 
 // Whether a string is entirely hiragana (plus the long-vowel mark) — what a

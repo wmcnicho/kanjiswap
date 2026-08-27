@@ -1,6 +1,6 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Box, Typography } from '@mui/material';
-import { toKana } from '../utils/kana';
+import { finalizeKana, toKana } from '../utils/kana';
 import { debugEnabled } from '../features';
 
 const FLASH_MS = 500;          // How long the word colours before it settles
@@ -71,10 +71,15 @@ const TypeWord = forwardRef(function TypeWord({
 
   // Converting the whole string each time is what lets romaji and kana mix:
   // kana passes through, and half-typed romaji stays visible.
+  //
+  // What's shown keeps a trailing "n" pending, because the next key may make it
+  // な rather than ん. What's *checked* settles it — by then there is no next
+  // key. So "hon" reads as ほn while it's being typed and counts as ほん.
   const consider = (text) => {
-    const kana = toKana(text);
-    setTyped(kana);
-    if (kana === reading) {
+    const shown = toKana(text);
+    setTyped(shown);
+    if (finalizeKana(shown) === reading) {
+      setTyped(reading); // Leave the settled reading on screen, not ほn
       succeed();
     }
   };
@@ -122,7 +127,7 @@ const TypeWord = forwardRef(function TypeWord({
       onStep?.(event.shiftKey ? -1 : 1);
       return;
     }
-    if (event.key === 'Enter' && typed.length > 0 && typed !== reading) {
+    if (event.key === 'Enter' && typed.length > 0 && finalizeKana(typed) !== reading) {
       event.preventDefault();
       fail(typed);
     }

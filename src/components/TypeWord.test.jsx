@@ -214,3 +214,43 @@ test('does not give away how long the reading is', () => {
   // Six kana; a field sized to fit them would be half the answer.
   expect(window.getComputedStyle(field).width).toBe('3ch');
 });
+
+// The field feeds its own converted value back in on every keystroke, which is
+// how いちねんせい came out as いちんえんせい: a trailing n committed to ん early,
+// and nothing could take it back.
+function typeOneKeyAtATime(label, romaji) {
+  const field = screen.getByLabelText(label);
+  let value = '';
+  for (const character of romaji) {
+    value = `${field.value}${character}`;
+    fireEvent.change(field, { target: { value } });
+  }
+}
+
+test('accepts a reading typed one key at a time, not just pasted', () => {
+  const onAttempt = jest.fn();
+  render(<TypeWord kanji='一年生' reading='いちねんせい' active onAttempt={onAttempt} />);
+
+  typeOneKeyAtATime(/reading for 一年生/i, 'ichinensei');
+
+  expect(onAttempt).toHaveBeenCalledWith(true, 'いちねんせい');
+});
+
+test('accepts nn for ん typed one key at a time', () => {
+  const onAttempt = jest.fn();
+  render(<TypeWord kanji='一年生' reading='いちねんせい' active onAttempt={onAttempt} />);
+
+  typeOneKeyAtATime(/reading for 一年生/i, 'ichinennsei');
+
+  expect(onAttempt).toHaveBeenCalledWith(true, 'いちねんせい');
+});
+
+test('accepts a reading that ends in ん, typed with a single n', () => {
+  const onAttempt = jest.fn();
+  render(<TypeWord kanji='本' reading='ほん' active onAttempt={onAttempt} />);
+
+  typeOneKeyAtATime(/reading for 本/i, 'hon');
+
+  expect(onAttempt).toHaveBeenCalledWith(true, 'ほん');
+  expect(screen.getByLabelText(/reading for 本/i)).toHaveValue('ほん'); // not ほn
+});
