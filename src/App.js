@@ -198,7 +198,7 @@ function App() {
             onClick={() => setNavOpen(true)}
             aria-label='Passages'
             size='small'
-            sx={{ minWidth: 40, px: 1, fontSize: '1.1rem', lineHeight: 1 }}
+            sx={{ minWidth: 44, minHeight: 44, px: 1, fontSize: '1.25rem', lineHeight: 1 }}
           >
             ☰
           </Button>

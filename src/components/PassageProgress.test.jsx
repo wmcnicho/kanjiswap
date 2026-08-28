@@ -52,3 +52,16 @@ test('the phone version fits a header bar', () => {
   );
   expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
 });
+
+test('the phone version shows a streak, where there is no room for the rest', () => {
+  const { rerender } = render(
+    <PassageProgress compact stats={statsFor()} totals={{ points: 120, streak: 4 }} onTryAgain={() => {}} />
+  );
+  expect(screen.getByText('×4')).toBeInTheDocument();
+
+  rerender(
+    <PassageProgress compact stats={statsFor()} totals={{ points: 120, streak: 1 }} onTryAgain={() => {}} />
+  );
+  // One in a row is not a streak.
+  expect(screen.queryByText(/×/)).not.toBeInTheDocument();
+});

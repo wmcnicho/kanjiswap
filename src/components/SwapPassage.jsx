@@ -167,6 +167,9 @@ function SwapPassage({
         maxWidth: '100%',
         overflowX: 'auto',
         overflowY: 'hidden',
+        // Vertical text scrolls sideways, which is also the gesture a phone
+        // reads as "go back a page".
+        overscrollBehaviorX: 'contain',
         px: 1,
       }
     : { maxWidth: '700px', width: '100%' };
@@ -174,7 +177,13 @@ function SwapPassage({
   return (
     <Box sx={layout}>
       {lines.map((segments, lineIndex) => (
-        <Typography key={lineIndex} variant='h5' sx={{ lineHeight: 2.5, minHeight: '1em' }}>
+        <Typography
+          key={lineIndex}
+          variant='h5'
+          // Furigana needs headroom above each line; a narrow screen needs the
+          // vertical space more.
+          sx={{ lineHeight: { xs: 2.2, md: 2.5 }, minHeight: '1em' }}
+        >
           {segments.map((segment, segmentIndex) =>
             segment.type !== 'swap' ? (
               <React.Fragment key={segmentIndex}>{segment.text}</React.Fragment>

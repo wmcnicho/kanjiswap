@@ -16,12 +16,19 @@ function PassageProgress({ stats, totals, direction = DIRECTION.toKanji, onTryAg
     return (
       <Box display='flex' alignItems='center' gap={1}>
         {complete ? (
-          <Button size='small' onClick={onTryAgain} sx={{ minWidth: 0, px: 1 }}>
+          <Button size='small' onClick={onTryAgain} sx={{ minWidth: 44, minHeight: 44, px: 1 }}>
             Try again
           </Button>
         ) : (
           <Typography variant='caption' color='text.secondary'>
             {solved}/{total}
+          </Typography>
+        )}
+        {/* A run going is worth knowing about on a phone too, where there's no
+            room for the rest of the tally. */}
+        {totals.streak > 1 && !complete && (
+          <Typography variant='caption' color='success.main'>
+            ×{totals.streak}
           </Typography>
         )}
         <Typography variant='caption' color='text.secondary' component='div'>
