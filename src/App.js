@@ -263,6 +263,7 @@ function App() {
                 passage={passage}
                 vertical={vertical}
                 typing={typing}
+                totals={state.totals}
                 isSolved={(word) => isSolved(state, passageId, word, direction)}
                 hintsVisible={hintsVisible}
                 onAttempt={handleAttempt}

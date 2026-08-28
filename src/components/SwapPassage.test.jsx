@@ -75,19 +75,25 @@ describe('reading the other way round', () => {
     expect(tooltipOptions()).toHaveLength(0);
   });
 
-  test('moves on to the next word once one is read', () => {
-    jest.useFakeTimers();
+  test('moves on the moment a word is read, with nothing to wait for', () => {
     render(<SwapPassage passage={passage} typing onAttempt={() => {}} />);
 
     fireEvent.change(screen.getByLabelText(/reading for 私/i), { target: { value: 'watashi' } });
-    act(() => {
-      jest.advanceTimersByTime(300); // typing hands off faster than clicking does
-    });
 
-    // The one field follows the passage to the next word.
+    // No timers advanced: waiting on an animation is what stops someone typing
+    // as fast as they can. The word's own flash plays out behind them.
     expect(screen.getByLabelText(/reading for 本/i)).toBeInTheDocument();
     expect(screen.getAllByRole('textbox')).toHaveLength(1);
-    jest.useRealTimers();
+  });
+
+  test('holds still after a wrong reading, since the word is unanswered', () => {
+    render(<SwapPassage passage={passage} typing onAttempt={() => {}} />);
+
+    const field = screen.getByLabelText(/reading for 私/i);
+    fireEvent.change(field, { target: { value: 'わたく' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+
+    expect(screen.getByLabelText(/reading for 私/i)).toBeInTheDocument();
   });
 });
 

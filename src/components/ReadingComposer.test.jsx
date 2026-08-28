@@ -1,18 +1,26 @@
 import { useState } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import ReadingComposer from './ReadingComposer';
 
 // The field is controlled by the passage, and feeds its own converted value
 // back in on every keystroke — which is where the conversion bugs lived.
 function Field({ kanji = '一年生', reading = 'いちねんせい', onOffer = () => {}, onStep }) {
   const [value, setValue] = useState('');
+  // The app scores a correct answer, and the reward is read off that score.
+  const [points, setPoints] = useState(0);
   return (
     <ReadingComposer
       kanji={kanji}
       reading={reading}
       value={value}
+      points={points}
       onValueChange={setValue}
-      onOffer={onOffer}
+      onOffer={(text) => {
+        if (text === reading) {
+          setPoints((current) => current + 15);
+        }
+        onOffer(text);
+      }}
       onStep={onStep}
     />
   );
@@ -173,4 +181,123 @@ test('sits the prompt on the line the reader will type on', () => {
 test('holds its place while the passage scrolls past it', () => {
   const { container } = render(<Field />);
   expect(container.firstChild).toHaveStyle({ position: 'sticky' });
+});
+
+describe('the reward for a correct answer', () => {
+  const composer = (props) => (
+    <ReadingComposer
+      kanji='一年生'
+      reading='いちねんせい'
+      value=''
+      onValueChange={() => {}}
+      onOffer={() => {}}
+      {...props}
+    />
+  );
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  test('flashes what the answer was worth, beside the field', () => {
+    const { rerender } = render(composer({ points: 40, streak: 1 }));
+    expect(screen.queryByTestId('award')).not.toBeInTheDocument();
+
+    rerender(composer({ points: 57, streak: 2 }));
+
+    expect(screen.getByTestId('award')).toHaveTextContent('(+17)');
+  });
+
+  test('says how long the run is, once it is a run', () => {
+    const { rerender } = render(composer({ points: 40, streak: 1 }));
+
+    rerender(composer({ points: 55, streak: 4 }));
+    expect(screen.getByTestId('award')).toHaveTextContent('×4');
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+    rerender(composer({ points: 70, streak: 1 }));
+    // One in a row is not a run worth announcing.
+    expect(screen.getByTestId('award')).not.toHaveTextContent('×');
+  });
+
+  test('goes away on its own', () => {
+    const { rerender } = render(composer({ points: 40 }));
+    rerender(composer({ points: 55 }));
+    expect(screen.getByTestId('award')).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(screen.queryByTestId('award')).not.toBeInTheDocument();
+  });
+
+  test('says nothing when the score resets for a new attempt', () => {
+    const { rerender } = render(composer({ points: 96 }));
+
+    rerender(composer({ points: 0 }));
+
+    expect(screen.queryByTestId('award')).not.toBeInTheDocument();
+  });
+
+  test('never moves the field the reader is typing into', () => {
+    const { rerender } = render(composer({ points: 40 }));
+    rerender(composer({ points: 55 }));
+
+    // Absolutely positioned, so a reward arriving mid-word can't shift the
+    // caret out from under someone typing fast.
+    expect(window.getComputedStyle(screen.getByTestId('award')).position).toBe('absolute');
+  });
+
+  test('lifts the answered reading off the field, where the eyes already are', () => {
+    // Typing it is what earns the reward, so the reward happens there — not
+    // only in a chip off to one side.
+    render(<Field />);
+    fireEvent.change(field(), { target: { value: 'ichinensei' } });
+
+    expect(screen.getByTestId('award-rise')).toHaveTextContent('いちねんせい');
+  });
+
+  test('shows the reading that was answered, not the one that follows it', () => {
+    const props = { value: '', onValueChange: () => {}, onOffer: () => {} };
+    const { rerender } = render(<ReadingComposer kanji='私' reading='わたし' points={0} {...props} />);
+
+    fireEvent.change(field('私'), { target: { value: 'watashi' } });
+    // Typing hands straight on, so the score arrives with the next word already
+    // in place — the reward has to remember what earned it.
+    rerender(<ReadingComposer kanji='本' reading='ほん' points={15} {...props} />);
+
+    expect(screen.getByTestId('award-rise')).toHaveTextContent('わたし');
+  });
+
+  test('is inert, so the next word keeps every keystroke', () => {
+    render(<Field />);
+    fireEvent.change(field(), { target: { value: 'ichinensei' } });
+
+    const rising = screen.getByTestId('award-rise');
+    expect(window.getComputedStyle(rising).position).toBe('absolute');
+    expect(window.getComputedStyle(rising).pointerEvents).toBe('none');
+    expect(rising).toHaveAttribute('aria-hidden', 'true');
+
+    // And the field still takes what is typed next.
+    fireEvent.change(field(), { target: { value: 'ho' } });
+    expect(field()).toHaveValue('ほ');
+  });
+
+  test('is gone before it can be in the way', () => {
+    render(<Field />);
+    fireEvent.change(field(), { target: { value: 'ichinensei' } });
+
+    act(() => {
+      jest.advanceTimersByTime(800);
+    });
+
+    expect(screen.queryByTestId('award-rise')).not.toBeInTheDocument();
+  });
 });
