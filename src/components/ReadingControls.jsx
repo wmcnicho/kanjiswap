@@ -85,7 +85,10 @@ function ReadingControls({ font, vertical, direction, onFontChange, onWritingMod
         disableUnderline
         inputProps={{ 'aria-label': 'Reading font' }}
         SelectDisplayProps={{ 'aria-label': 'Reading font' }}
-        sx={{ fontSize: '0.8rem', '& .MuiSelect-select': { py: 0.5 } }}
+        sx={{
+          fontSize: '0.8rem',
+          '& .MuiSelect-select': { py: { xs: 1.25, md: 0.5 }, minHeight: { xs: 20, md: 0 } },
+        }}
       >
         {FONTS.map((option) => (
           <MenuItem key={option.id} value={option.id} sx={{ fontFamily: `${option.stack}, sans-serif` }}>

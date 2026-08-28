@@ -21,3 +21,6 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Agent worktrees live inside the repo but are not part of it
+.claude/worktrees/

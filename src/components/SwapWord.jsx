@@ -126,6 +126,11 @@ const SwapWord = forwardRef(function SwapWord({
         // Keeps a finger from landing between two words on a phone.
         py: 0.35,
         WebkitTapHighlightColor: 'transparent',
+        // The phone header is sticky, so a word scrolled to the top edge lands
+        // underneath it without this.
+        scrollMarginTop: { xs: 72, md: 0 },
+        // Tapping a word repeatedly shouldn't start selecting the passage.
+        '@media (pointer: coarse)': { userSelect: 'none' },
         // The word the keyboard is aimed at, marked without shouting about it.
         backgroundColor: active ? 'rgba(0, 0, 0, 0.06)' : 'transparent',
         borderRadius: 1,

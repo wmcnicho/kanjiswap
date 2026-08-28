@@ -49,7 +49,10 @@ function PassageNav({ stages, selectedIndex, selectedDirection, statsFor, onSele
 
         return (
           <Box key={stage.stage} sx={{ mb: 0.5 }}>
-            <ListItemButton onClick={() => toggleStage(stage.stage)} sx={{ py: 0.75 }}>
+            <ListItemButton
+              onClick={() => toggleStage(stage.stage)}
+              sx={{ py: { xs: 1.25, md: 0.75 }, minHeight: { xs: 48, md: 0 } }}
+            >
               <ListItemText
                 primary={`${open ? '▾' : '▸'} ${stage.label}`}
                 secondary={`${done}/${stage.passages.length} finished`}
@@ -76,7 +79,13 @@ function PassageNav({ stages, selectedIndex, selectedDirection, statsFor, onSele
                         <ListItemButton
                           selected={passage.index === selectedIndex}
                           onClick={() => onSelect(passage.index)}
-                          sx={{ px: 0.5, py: 0.25, borderRadius: 1 }}
+                          // A thumb needs a target; a cursor doesn't.
+                          sx={{
+                            px: 0.5,
+                            py: { xs: 1, md: 0.25 },
+                            minHeight: { xs: 44, md: 0 },
+                            borderRadius: 1,
+                          }}
                         >
                           <Typography
                             variant='body2'
@@ -98,6 +107,7 @@ function PassageNav({ stages, selectedIndex, selectedDirection, statsFor, onSele
                           </Typography>
                         </ListItemButton>
 
+                        <Box sx={{ display: 'flex', flexDirection: { xs: 'row', md: 'column' }, gap: { xs: 1, md: 0 } }}>
                         {BARS.map((bar) => {
                           const stats = statsFor(passage, bar.direction);
                           const finished = isFinished(stats);
@@ -117,12 +127,18 @@ function PassageNav({ stages, selectedIndex, selectedDirection, statsFor, onSele
                                   gap: 0.75,
                                   width: '100%',
                                   px: 0.5,
-                                  py: 0.25,
+                                  // Side by side on a phone, so both are worth
+                                  // aiming at without making the list twice as long.
+                                  py: { xs: 1.25, md: 0.25 },
+                                  minHeight: { xs: 44, md: 0 },
                                   border: 0,
+                                  borderRadius: 1,
                                   background: 'none',
                                   cursor: 'pointer',
                                   opacity: current ? 1 : 0.55,
                                   '&:hover': { opacity: 1 },
+                                  '&:active': { backgroundColor: 'rgba(0, 0, 0, 0.05)' },
+                                  WebkitTapHighlightColor: 'transparent',
                                 }}
                               >
                                 <Box
@@ -136,12 +152,13 @@ function PassageNav({ stages, selectedIndex, selectedDirection, statsFor, onSele
                                   variant='determinate'
                                   value={Math.round(stats.fraction * 100)}
                                   color={finished ? 'success' : 'primary'}
-                                  sx={{ height: 3, borderRadius: 2, flexGrow: 1 }}
+                                  sx={{ height: { xs: 5, md: 3 }, borderRadius: 2, flexGrow: 1 }}
                                 />
                               </Box>
                             </Tooltip>
                           );
                         })}
+                        </Box>
                       </Box>
                     );
                   })}
