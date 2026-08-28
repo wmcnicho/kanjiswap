@@ -247,3 +247,14 @@ describe('with the reading exercise disabled', () => {
     expect(screen.queryAllByText(/漢字 → かな/)).toHaveLength(0);
   });
 });
+
+test('gives the header one declared height for things below it to sit against', () => {
+  const { container } = render(<App />);
+
+  // The gap under it was a guessed number that didn't match; both sides now
+  // read the same variable.
+  const root = container.firstChild;
+  expect(root).toHaveStyle({ '--app-header': '48px' });
+  const header = container.querySelector('header');
+  expect(header).toHaveStyle({ height: 'var(--app-header)' });
+});

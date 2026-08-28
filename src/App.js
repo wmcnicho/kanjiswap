@@ -170,6 +170,10 @@ function App() {
       <CssBaseline />
       <Box
         sx={{
+          // The phone header's height, declared once: anything sticking below
+          // it reads this rather than guessing, or the passage shows through
+          // the gap between them.
+          '--app-header': '48px',
           minHeight: '100vh',
           '@supports (min-height: 100dvh)': { minHeight: '100dvh' },
           display: 'flex',
@@ -186,9 +190,10 @@ function App() {
             top: 0,
             zIndex: (theme) => theme.zIndex.appBar,
             alignItems: 'center',
+            height: 'var(--app-header)',
+            boxSizing: 'border-box',
             gap: 1,
             px: 1.5,
-            py: 1,
             backgroundColor: 'background.default',
             borderBottom: '1px solid',
             borderColor: 'divider',

@@ -64,8 +64,8 @@ function ReadingComposer({ kanji, value, reading, onValueChange, onOffer, onStep
     <Box
       sx={{
         position: 'sticky',
-        // Directly under the header bar on a phone, near the top on a desktop.
-        top: { xs: 49, md: 8 },
+        // Flush under the header bar on a phone, near the top on a desktop.
+        top: { xs: 'var(--app-header)', md: 8 },
         zIndex: 3,
         alignSelf: 'stretch',
         display: 'flex',
@@ -74,7 +74,11 @@ function ReadingComposer({ kanji, value, reading, onValueChange, onOffer, onStep
         gap: 0.25,
         py: { xs: 0.75, md: 1.5 },
         mb: { xs: 1, md: 2 },
-        width: '100%',
+        // Bleeds to the screen edges, so nothing scrolls past beside it.
+        mx: { xs: -1, md: 0 },
+        px: { xs: 1, md: 0 },
+        width: 'auto',
+        minWidth: '100%',
         backgroundColor: 'background.default',
         // Opaque all the way across, or the passage shows through as it passes.
         boxShadow: (theme) => `0 6px 6px -6px ${theme.palette.divider}`,
