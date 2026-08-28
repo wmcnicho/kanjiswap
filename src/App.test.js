@@ -192,8 +192,8 @@ describe('with the reading exercise enabled', () => {
   const { title } = titleOf(passages[0]);
 
     // Two bars per passage: supply the kanji, and read it back.
-    expect(screen.getAllByLabelText(`${title} — Supply the kanji`).length).toBeGreaterThan(0);
-    expect(screen.getAllByLabelText(`${title} — Type the reading`).length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText(`${title} — かな → 漢字`).length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText(`${title} — 漢字 → かな`).length).toBeGreaterThan(0);
   });
 
   test('switches the exercise round, and remembers which way it was', async () => {
@@ -215,7 +215,7 @@ describe('with the reading exercise enabled', () => {
     const { title } = titleOf(passages[1]);
 
     act(() => {
-      userEvent.click(screen.getAllByLabelText(`${title} — Type the reading`)[0]);
+      userEvent.click(screen.getAllByLabelText(`${title} — 漢字 → かな`)[0]);
     });
 
     await waitFor(() => {
@@ -229,8 +229,8 @@ describe('with the reading exercise disabled', () => {
     render(<App />);
     const { title } = titleOf(passages[0]);
 
-    expect(screen.getAllByLabelText(`${title} — Supply the kanji`).length).toBeGreaterThan(0);
-    expect(screen.queryByLabelText(`${title} — Type the reading`)).not.toBeInTheDocument();
+    expect(screen.getAllByLabelText(`${title} — かな → 漢字`).length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText(`${title} — 漢字 → かな`)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/exercise direction/i)).not.toBeInTheDocument();
   });
 

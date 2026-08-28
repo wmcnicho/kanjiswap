@@ -145,3 +145,10 @@ describe('with a Japanese IME', () => {
     expect(field()).toHaveValue('いちねn');
   });
 });
+
+test('names the field in Japanese, with furigana', () => {
+  render(<Field />);
+  const label = screen.getByText('読み方');
+  expect(label).toBeInTheDocument();
+  expect(label).toHaveTextContent('よみかた'); // the ruby annotation rides along
+});

@@ -92,7 +92,6 @@ function ReadingComposer({ kanji, value, reading, onValueChange, onOffer, onStep
           consider(event.target.value);
         }}
         aria-label={`Reading for ${kanji}`}
-        placeholder='よみかた'
         autoComplete='off'
         autoCapitalize='off'
         autoCorrect='off'
@@ -115,6 +114,16 @@ function ReadingComposer({ kanji, value, reading, onValueChange, onOffer, onStep
           '&::placeholder': { color: 'text.secondary', opacity: 0.5 },
         }}
       />
+
+      <Typography
+        component='ruby'
+        variant='caption'
+        color='text.secondary'
+        sx={{ rubyPosition: 'over', opacity: 0.7 }}
+      >
+        読み方
+        <Box component='rt' sx={{ fontSize: '0.7em' }}>よみかた</Box>
+      </Typography>
 
       {debugEnabled() && (
         <Typography variant='caption' color='text.secondary' data-testid='type-debug'>

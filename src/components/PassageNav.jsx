@@ -15,8 +15,8 @@ import { DIRECTION } from '../utils/progress';
 // you're being asked to produce: 漢 when you supply the kanji, か when you read
 // it back.
 const BARS = [
-  { direction: DIRECTION.toKanji, label: '漢', title: 'Supply the kanji' },
-  { direction: DIRECTION.toReading, label: 'か', title: 'Type the reading' },
+  { direction: DIRECTION.toKanji, label: '漢', title: 'かな → 漢字' },
+  { direction: DIRECTION.toReading, label: 'か', title: '漢字 → かな' },
 ];
 
 // The learning path: stages that collapse, the chapters within them, and each
@@ -105,8 +105,9 @@ function PassageNav({ stages, selectedIndex, selectedDirection, statsFor, onSele
                           const finished = isFinished(stats);
                           const current = passage.index === selectedIndex
                             && bar.direction === selectedDirection;
+                          // Over the bar, not out in the margin.
                           return (
-                            <Tooltip key={bar.direction} title={bar.title} placement='right'>
+                            <Tooltip key={bar.direction} title={bar.title} placement='top'>
                               <Box
                                 component='button'
                                 type='button'
