@@ -243,13 +243,20 @@ function App() {
         <Box
           component='main'
           flexGrow={1}
-          p={{ xs: 2, md: 4 }}
+          p={{ xs: 1, md: 4 }}
           pb={{ xs: 9, md: 4 }} // room for the reading controls in the corner
           display='flex'
           flexDirection='column'
         >
           <Box display='flex' flexGrow={1} gap={4} justifyContent='center'>
-            <Box display='flex' flexDirection='column' justifyContent='center' alignItems='center' flexGrow={1}>
+            <Box
+              display='flex'
+              flexDirection='column'
+              justifyContent={{ xs: 'flex-start', md: 'center' }}
+              alignItems='center'
+              flexGrow={1}
+              minWidth={0}
+            >
               {/* Keyed by attempt so starting a fresh one clears the words on screen —
                   swap state is component-local and would otherwise survive the reset. */}
               <SwapPassage

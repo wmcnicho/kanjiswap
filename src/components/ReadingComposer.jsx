@@ -64,19 +64,23 @@ function ReadingComposer({ kanji, value, reading, onValueChange, onOffer, onStep
     <Box
       sx={{
         position: 'sticky',
-        top: { xs: 52, md: 8 },
-        zIndex: 2,
+        // Directly under the header bar on a phone, near the top on a desktop.
+        top: { xs: 49, md: 8 },
+        zIndex: 3,
+        alignSelf: 'stretch',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 0.5,
-        py: 1.5,
-        mb: 2,
+        gap: 0.25,
+        py: { xs: 0.75, md: 1.5 },
+        mb: { xs: 1, md: 2 },
         width: '100%',
         backgroundColor: 'background.default',
+        // Opaque all the way across, or the passage shows through as it passes.
+        boxShadow: (theme) => `0 6px 6px -6px ${theme.palette.divider}`,
       }}
     >
-      <Typography variant='h4' component='div' sx={{ lineHeight: 1.2 }}>
+      <Typography variant='h4' component='div' sx={{ lineHeight: 1.2, fontSize: { xs: '1.75rem', md: '2.125rem' } }}>
         {kanji}
       </Typography>
 
@@ -85,24 +89,40 @@ function ReadingComposer({ kanji, value, reading, onValueChange, onOffer, onStep
           // A placeholder attribute is a plain string and can carry no ruby, so
           // the prompt is drawn over the empty field instead. Clicks fall
           // through to the input beneath it.
-          <Typography
-            component='ruby'
+          // Ruby reserves a line above the text, which pushed 読み方 down onto
+          // the field's own underline. The furigana is floated instead, so the
+          // prompt sits exactly where the reader's first character will.
+          <Box
+            component='span'
             aria-hidden='true'
             sx={{
               position: 'absolute',
               top: 0,
-              lineHeight: 1,
               py: 0.5,
               fontSize: '1.35rem',
+              lineHeight: 1.4,
               color: 'text.secondary',
-              opacity: 0.45,
+              opacity: 0.4,
               pointerEvents: 'none',
-              rubyPosition: 'over',
             }}
           >
-            読み方
-            <Box component='rt' sx={{ fontSize: '0.4em' }}>よみかた</Box>
-          </Typography>
+            <Box component='span' sx={{ position: 'relative' }}>
+              読み方
+              <Box
+                component='span'
+                sx={{
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  top: '-0.8em',
+                  fontSize: '0.4em',
+                  textAlign: 'center',
+                }}
+              >
+                よみかた
+              </Box>
+            </Box>
+          </Box>
         )}
 
         <Box

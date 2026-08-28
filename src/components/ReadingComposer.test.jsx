@@ -160,3 +160,17 @@ test('the prompt gives way as soon as anything is typed', () => {
   // It stands in for a placeholder, so it behaves like one.
   expect(screen.queryByText('読み方')).not.toBeInTheDocument();
 });
+
+test('sits the prompt on the line the reader will type on', () => {
+  render(<Field />);
+
+  // Ruby reserves a line above its text, which pushed 読み方 down onto the
+  // field's underline. The furigana is floated out of the flow instead.
+  expect(screen.getByText('読み方').closest('ruby')).toBeNull();
+  expect(screen.getByText('よみかた')).toHaveStyle({ position: 'absolute' });
+});
+
+test('holds its place while the passage scrolls past it', () => {
+  const { container } = render(<Field />);
+  expect(container.firstChild).toHaveStyle({ position: 'sticky' });
+});
