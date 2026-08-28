@@ -1,14 +1,7 @@
-import { buildStamp, debugEnabled, typedReadingEnabled } from './features';
+import { buildStamp, debugEnabled } from './features';
 
 afterEach(() => {
-  delete process.env.REACT_APP_TYPED_READING;
   delete process.env.REACT_APP_BUILD;
-});
-
-test('experimental features are off unless a build turns them on', () => {
-  expect(typedReadingEnabled()).toBe(false);
-  process.env.REACT_APP_TYPED_READING = 'on';
-  expect(typedReadingEnabled()).toBe(true);
 });
 
 test('names the build, so a stale page can be told apart from a broken one', () => {

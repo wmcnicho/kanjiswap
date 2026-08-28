@@ -17,13 +17,13 @@ Standard Create React App (react-scripts 5):
 
 There is no separate lint command; ESLint (react-app config) runs as part of `npm start`/`npm run build`. On CI, `CI=true` makes those lint warnings fail the build, so keep the build warning-free.
 
-## Experimental features
+## Experimental branch and debugging
 
-`src/features.js` gates unfinished work behind build flags, read at call time so a test can turn one on around the code it exercises. Nothing is on unless a build sets it.
+`src/features.js` holds build-time switches: gate unfinished work there and turn it on only for the experimental build. Read at call time, so a test can enable one around the code it exercises. Nothing is gated at the moment.
 
-`REACT_APP_TYPED_READING` gates the 漢字 → かな exercise. **It is off on main**: typing doesn't work properly yet. With it off the direction toggle is absent, the rail shows one bar per passage, and a saved `direction` setting asking for the reading exercise is ignored rather than stranding someone in a broken mode.
+The Pages workflow publishes two builds from one deployment: `main` at `/`, and the branch named by `EXPERIMENTAL_BRANCH` (currently `experimental/typed-reading`) at **`/next`**, built with `PUBLIC_URL=/kanjiswap/next`. That build is `continue-on-error` — unfinished work must never block the release — and the branch is allowed not to exist. Pushing to either branch rebuilds both. `experimental/*` is on the `github-pages` environment's deployment-branch allowlist; without that a branch build can't publish.
 
-The Pages workflow publishes two builds from one deployment: `main` at `/`, and the branch named by `EXPERIMENTAL_BRANCH` (currently `experimental/typed-reading`) at **`/next`**, built with `PUBLIC_URL=/kanjiswap/next` and the flag on. That build is `continue-on-error` — unfinished work must never block the release — and the branch is allowed not to exist. Pushing to either branch rebuilds both.
+`?debug` shows what the typing field is receiving — the raw value, the converted kana, the expected reading — and, first, `buildStamp()`: the commit the running bundle was built from. Pages caches `index.html`, so a page can keep running an older bundle after a deploy, and "still doesn't work" then means nothing. Both builds are stamped with `REACT_APP_BUILD`.
 
 ## Two directions
 

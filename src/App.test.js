@@ -178,16 +178,8 @@ test('remembers that the option keys have been shown', async () => {
   });
 });
 
-describe('with the reading exercise enabled', () => {
-  beforeEach(() => {
-    process.env.REACT_APP_TYPED_READING = 'on';
-  });
-
-  afterEach(() => {
-    delete process.env.REACT_APP_TYPED_READING;
-  });
-
-  test('offers both directions for every passage in the rail', () => {
+describe('the two directions', () => {
+  test('offers both for every passage in the rail', () => {
   render(<App />);
   const { title } = titleOf(passages[0]);
 
@@ -221,30 +213,6 @@ describe('with the reading exercise enabled', () => {
     await waitFor(() => {
       expect(screen.getAllByText(/漢字 → かな/).length).toBeGreaterThan(0);
     });
-  });
-});
-
-describe('with the reading exercise disabled', () => {
-  test('offers only the direction that works', () => {
-    render(<App />);
-    const { title } = titleOf(passages[0]);
-
-    expect(screen.getAllByLabelText(`${title} — かな → 漢字`).length).toBeGreaterThan(0);
-    expect(screen.queryByLabelText(`${title} — 漢字 → かな`)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/exercise direction/i)).not.toBeInTheDocument();
-  });
-
-  test('ignores a saved setting asking for the unfinished one', () => {
-    const store = appendEvent(createStore('install_test'), EVENT.settingChanged, {
-      setting: 'direction', value: 'to_reading',
-    });
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-
-    render(<App />);
-
-    // Someone who switched on a build that had it stays on the one that works.
-    expect(screen.getAllByText(/かな → 漢字/).length).toBeGreaterThan(0);
-    expect(screen.queryAllByText(/漢字 → かな/)).toHaveLength(0);
   });
 });
 

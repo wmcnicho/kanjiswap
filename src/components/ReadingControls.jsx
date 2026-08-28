@@ -26,8 +26,6 @@ function ReadingControls({ font, vertical, direction, onFontChange, onWritingMod
         '@media (pointer: coarse)': { opacity: 0.8 },
       }}
     >
-      {/* Absent entirely where the reading exercise isn't enabled. */}
-      {direction !== null && (
       <Tooltip
         title={typing ? 'Switch to supplying the kanji' : 'Switch to typing the reading'}
         placement='top'
@@ -54,7 +52,6 @@ function ReadingControls({ font, vertical, direction, onFontChange, onWritingMod
           {typing ? '漢→か' : 'か→漢'}
         </Box>
       </Tooltip>
-      )}
 
       <Tooltip title={vertical ? 'Read left to right' : 'Read top to bottom'} placement='top'>
         <Box

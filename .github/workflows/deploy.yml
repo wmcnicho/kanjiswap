@@ -67,7 +67,6 @@ jobs:
         working-directory: next
         env:
           PUBLIC_URL: /kanjiswap/next
-          REACT_APP_TYPED_READING: 'on'
           REACT_APP_BUILD: ${{ github.sha }}
         run: |
           npm ci
