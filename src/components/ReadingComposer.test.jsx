@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import ReadingComposer from './ReadingComposer';
 
 // The field is controlled by the passage, and feeds its own converted value
@@ -173,4 +173,77 @@ test('sits the prompt on the line the reader will type on', () => {
 test('holds its place while the passage scrolls past it', () => {
   const { container } = render(<Field />);
   expect(container.firstChild).toHaveStyle({ position: 'sticky' });
+});
+
+describe('the reward for a correct answer', () => {
+  const composer = (props) => (
+    <ReadingComposer
+      kanji='一年生'
+      reading='いちねんせい'
+      value=''
+      onValueChange={() => {}}
+      onOffer={() => {}}
+      {...props}
+    />
+  );
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  test('flashes what the answer was worth, beside the field', () => {
+    const { rerender } = render(composer({ points: 40, streak: 1 }));
+    expect(screen.queryByTestId('award')).not.toBeInTheDocument();
+
+    rerender(composer({ points: 57, streak: 2 }));
+
+    expect(screen.getByTestId('award')).toHaveTextContent('(+17)');
+  });
+
+  test('says how long the run is, once it is a run', () => {
+    const { rerender } = render(composer({ points: 40, streak: 1 }));
+
+    rerender(composer({ points: 55, streak: 4 }));
+    expect(screen.getByTestId('award')).toHaveTextContent('×4');
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+    rerender(composer({ points: 70, streak: 1 }));
+    // One in a row is not a run worth announcing.
+    expect(screen.getByTestId('award')).not.toHaveTextContent('×');
+  });
+
+  test('goes away on its own', () => {
+    const { rerender } = render(composer({ points: 40 }));
+    rerender(composer({ points: 55 }));
+    expect(screen.getByTestId('award')).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(screen.queryByTestId('award')).not.toBeInTheDocument();
+  });
+
+  test('says nothing when the score resets for a new attempt', () => {
+    const { rerender } = render(composer({ points: 96 }));
+
+    rerender(composer({ points: 0 }));
+
+    expect(screen.queryByTestId('award')).not.toBeInTheDocument();
+  });
+
+  test('never moves the field the reader is typing into', () => {
+    const { rerender } = render(composer({ points: 40 }));
+    rerender(composer({ points: 55 }));
+
+    // Absolutely positioned, so a reward arriving mid-word can't shift the
+    // caret out from under someone typing fast.
+    expect(window.getComputedStyle(screen.getByTestId('award')).position).toBe('absolute');
+  });
 });

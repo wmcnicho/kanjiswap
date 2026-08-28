@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { finalizeKana, toKana } from '../utils/kana';
 import { buildStamp, debugEnabled } from '../features';
@@ -8,10 +8,28 @@ import { buildStamp, debugEnabled } from '../features';
 // The word being answered is shown here at size, so there is somewhere to look
 // while typing that isn't 0.45em furigana — and an IME has room to put its
 // candidate window without covering the text.
-function ReadingComposer({ kanji, value, reading, onValueChange, onOffer, onStep }) {
+// How long the reward sits beside the field before it goes.
+const AWARD_MS = 900;
+
+function ReadingComposer({ kanji, value, reading, points = 0, streak = 0, onValueChange, onOffer, onStep }) {
   const inputRef = useRef(null);
   const composing = useRef(false);
   const lastRaw = useRef('');
+  // What the last correct answer was worth, shown beside the field. Reading it
+  // off the running score means it can't disagree with the score itself.
+  const scored = useRef(points);
+  const [award, setAward] = useState(null);
+
+  useEffect(() => {
+    const gained = points - scored.current;
+    scored.current = points;
+    if (gained <= 0) {
+      return undefined; // A new attempt resets the score; that isn't a win
+    }
+    setAward({ gained, streak });
+    const timer = setTimeout(() => setAward(null), AWARD_MS);
+    return () => clearTimeout(timer);
+  }, [points, streak]);
 
   // Every new word gets the caret, so the passage can be played straight
   // through without reaching for the mouse.
@@ -89,6 +107,44 @@ function ReadingComposer({ kanji, value, reading, onValueChange, onOffer, onStep
       </Typography>
 
       <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+        {award && (
+          // Beside the field on a wide screen, under it on a narrow one, where
+          // there is no room to the side. Never in the flow: the field must not
+          // move while someone is typing into it.
+          <Box
+            data-testid='award'
+            sx={{
+              position: 'absolute',
+              left: { xs: '50%', md: '100%' },
+              top: { xs: '100%', md: '50%' },
+              transform: { xs: 'translateX(-50%)', md: 'translateY(-50%)' },
+              ml: { xs: 0, md: 1.5 },
+              mt: { xs: 0.25, md: 0 },
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: 0.5,
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+              color: 'success.main',
+              fontVariantNumeric: 'tabular-nums',
+              animation: `kanjiswap-award ${AWARD_MS}ms ease-out forwards`,
+              '@keyframes kanjiswap-award': {
+                '0%': { opacity: 0, transform: 'translate(var(--award-x, 0), 6px)' },
+                '25%': { opacity: 1 },
+                '100%': { opacity: 0 },
+              },
+            }}
+          >
+            <Box component='span' sx={{ fontSize: '1.1rem', fontWeight: 500 }}>
+              (+{award.gained})
+            </Box>
+            {award.streak > 1 && (
+              <Box component='span' sx={{ fontSize: '0.8rem' }}>
+                ×{award.streak}
+              </Box>
+            )}
+          </Box>
+        )}
         {value === '' && (
           // A placeholder attribute is a plain string and can carry no ruby, so
           // the prompt is drawn over the empty field instead. Clicks fall
@@ -160,6 +216,8 @@ function ReadingComposer({ kanji, value, reading, onValueChange, onOffer, onStep
           background: 'transparent',
           py: 0.5,
             '&:focus': { borderColor: 'text.secondary' },
+          ...(award ? { borderColor: 'success.main', color: 'success.main' } : {}),
+          transition: 'border-color 200ms ease-out, color 200ms ease-out',
           }}
         />
       </Box>

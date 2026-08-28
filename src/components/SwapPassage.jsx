@@ -11,7 +11,10 @@ import { wordKey } from '../utils/progress';
 const ADVANCE_MS = 620;
 // Typing needs a much shorter one: the reader is mid-flow with their hands on
 // the keys, and 600ms of nothing between words reads as the app hesitating.
-const TYPED_ADVANCE_MS = 220;
+// Typing advances at once. The word's own flash and its furigana play out
+// behind the reader, who is already answering the next one — waiting for an
+// animation is what stops someone going fast.
+const TYPED_ADVANCE_MS = 0;
 
 // A new passage shows its first word's choices on its own, once the reader has
 // had a moment to look at the text. Any move — hovering, tapping, a key —
@@ -30,6 +33,7 @@ function SwapPassage({
   passage,
   vertical = false,
   typing = false, // kanji on the page, reading typed in — the other direction
+  totals = { points: 0, streak: 0 },
   isSolved = () => false,
   hintsVisible = false,
   onAttempt,
@@ -128,15 +132,19 @@ function SwapPassage({
 
   const handleAttempt = (segment, correct, chosen) => {
     onAttempt?.(segment, correct, chosen);
-    if (correct) {
-      // Carry on to the next word so play keeps its rhythm; a wrong guess stays
-      // put, because the word hasn't been answered yet.
-      clearTimeout(advance.current);
-      advance.current = setTimeout(
-        () => setChosenKey(nextAfter(segment.key)),
-        typing ? TYPED_ADVANCE_MS : ADVANCE_MS
-      );
+    if (!correct) {
+      return; // A wrong guess stays put: the word hasn't been answered yet
     }
+    // Carry on to the next word so play keeps its rhythm.
+    clearTimeout(advance.current);
+    if (typing && TYPED_ADVANCE_MS === 0) {
+      setChosenKey(nextAfter(segment.key)); // No wait at all — go as fast as you can type
+      return;
+    }
+    advance.current = setTimeout(
+      () => setChosenKey(nextAfter(segment.key)),
+      typing ? TYPED_ADVANCE_MS : ADVANCE_MS
+    );
   };
 
   useEffect(() => {
@@ -271,6 +279,8 @@ function SwapPassage({
         <ReadingComposer
           kanji={activeSegment.kanji}
           reading={activeSegment.reading}
+          points={totals.points}
+          streak={totals.streak}
           value={typed}
           onValueChange={setTyped}
           onOffer={offerReading}
