@@ -6,13 +6,21 @@ import ReadingComposer from './ReadingComposer';
 // back in on every keystroke — which is where the conversion bugs lived.
 function Field({ kanji = '一年生', reading = 'いちねんせい', onOffer = () => {}, onStep }) {
   const [value, setValue] = useState('');
+  // The app scores a correct answer, and the reward is read off that score.
+  const [points, setPoints] = useState(0);
   return (
     <ReadingComposer
       kanji={kanji}
       reading={reading}
       value={value}
+      points={points}
       onValueChange={setValue}
-      onOffer={onOffer}
+      onOffer={(text) => {
+        if (text === reading) {
+          setPoints((current) => current + 15);
+        }
+        onOffer(text);
+      }}
       onStep={onStep}
     />
   );
@@ -245,5 +253,51 @@ describe('the reward for a correct answer', () => {
     // Absolutely positioned, so a reward arriving mid-word can't shift the
     // caret out from under someone typing fast.
     expect(window.getComputedStyle(screen.getByTestId('award')).position).toBe('absolute');
+  });
+
+  test('lifts the answered reading off the field, where the eyes already are', () => {
+    // Typing it is what earns the reward, so the reward happens there — not
+    // only in a chip off to one side.
+    render(<Field />);
+    fireEvent.change(field(), { target: { value: 'ichinensei' } });
+
+    expect(screen.getByTestId('award-rise')).toHaveTextContent('いちねんせい');
+  });
+
+  test('shows the reading that was answered, not the one that follows it', () => {
+    const props = { value: '', onValueChange: () => {}, onOffer: () => {} };
+    const { rerender } = render(<ReadingComposer kanji='私' reading='わたし' points={0} {...props} />);
+
+    fireEvent.change(field('私'), { target: { value: 'watashi' } });
+    // Typing hands straight on, so the score arrives with the next word already
+    // in place — the reward has to remember what earned it.
+    rerender(<ReadingComposer kanji='本' reading='ほん' points={15} {...props} />);
+
+    expect(screen.getByTestId('award-rise')).toHaveTextContent('わたし');
+  });
+
+  test('is inert, so the next word keeps every keystroke', () => {
+    render(<Field />);
+    fireEvent.change(field(), { target: { value: 'ichinensei' } });
+
+    const rising = screen.getByTestId('award-rise');
+    expect(window.getComputedStyle(rising).position).toBe('absolute');
+    expect(window.getComputedStyle(rising).pointerEvents).toBe('none');
+    expect(rising).toHaveAttribute('aria-hidden', 'true');
+
+    // And the field still takes what is typed next.
+    fireEvent.change(field(), { target: { value: 'ho' } });
+    expect(field()).toHaveValue('ほ');
+  });
+
+  test('is gone before it can be in the way', () => {
+    render(<Field />);
+    fireEvent.change(field(), { target: { value: 'ichinensei' } });
+
+    act(() => {
+      jest.advanceTimersByTime(800);
+    });
+
+    expect(screen.queryByTestId('award-rise')).not.toBeInTheDocument();
   });
 });

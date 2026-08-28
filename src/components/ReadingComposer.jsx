@@ -9,7 +9,10 @@ import { buildStamp, debugEnabled } from '../features';
 // while typing that isn't 0.45em furigana — and an IME has room to put its
 // candidate window without covering the text.
 // How long the reward sits beside the field before it goes.
-const AWARD_MS = 900;
+const AWARD_MS = 700;
+// The reading answered correctly lifts off the field itself, where the reader
+// is already looking. Short: it has to be gone before the next word is typed.
+const RISE_MS = 420;
 
 function ReadingComposer({ kanji, value, reading, points = 0, streak = 0, onValueChange, onOffer, onStep }) {
   const inputRef = useRef(null);
@@ -18,6 +21,9 @@ function ReadingComposer({ kanji, value, reading, points = 0, streak = 0, onValu
   // What the last correct answer was worth, shown beside the field. Reading it
   // off the running score means it can't disagree with the score itself.
   const scored = useRef(points);
+  // What was last offered, so the reward can show the reading that earned it —
+  // by then the `reading` prop has already moved on to the next word.
+  const offered = useRef('');
   const [award, setAward] = useState(null);
 
   useEffect(() => {
@@ -26,7 +32,7 @@ function ReadingComposer({ kanji, value, reading, points = 0, streak = 0, onValu
     if (gained <= 0) {
       return undefined; // A new attempt resets the score; that isn't a win
     }
-    setAward({ gained, streak });
+    setAward({ gained, streak, text: offered.current });
     const timer = setTimeout(() => setAward(null), AWARD_MS);
     return () => clearTimeout(timer);
   }, [points, streak]);
@@ -45,8 +51,13 @@ function ReadingComposer({ kanji, value, reading, points = 0, streak = 0, onValu
     const shown = toKana(text);
     onValueChange(shown);
     if (finalizeKana(shown) === reading) {
-      onOffer(reading);
+      offer(reading);
     }
+  };
+
+  const offer = (text) => {
+    offered.current = text;
+    onOffer(text);
   };
 
   const handleChange = (event) => {
@@ -74,7 +85,7 @@ function ReadingComposer({ kanji, value, reading, points = 0, streak = 0, onValu
     }
     if (event.key === 'Enter' && value.length > 0) {
       event.preventDefault();
-      onOffer(finalizeKana(value));
+      offer(finalizeKana(value));
     }
   };
 
@@ -107,6 +118,34 @@ function ReadingComposer({ kanji, value, reading, points = 0, streak = 0, onValu
       </Typography>
 
       <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+        {award && (
+          // The answer, in the field it was typed into, lifting away. Purely
+          // decorative: absolutely positioned and inert, so the input beneath
+          // it keeps every keystroke of the next word.
+          <Box
+            component='span'
+            aria-hidden='true'
+            data-testid='award-rise'
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: '50%',
+              py: 0.5,
+              fontSize: '1.35rem',
+              lineHeight: 1.4,
+              color: 'success.main',
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+              animation: `kanjiswap-rise ${RISE_MS}ms ease-out forwards`,
+              '@keyframes kanjiswap-rise': {
+                '0%': { opacity: 1, transform: 'translate(-50%, 0)' },
+                '100%': { opacity: 0, transform: 'translate(-50%, -16px)' },
+              },
+            }}
+          >
+            {award.text}
+          </Box>
+        )}
         {award && (
           // Beside the field on a wide screen, under it on a narrow one, where
           // there is no room to the side. Never in the flow: the field must not
@@ -145,7 +184,7 @@ function ReadingComposer({ kanji, value, reading, points = 0, streak = 0, onValu
             )}
           </Box>
         )}
-        {value === '' && (
+        {value === '' && !award && (
           // A placeholder attribute is a plain string and can carry no ruby, so
           // the prompt is drawn over the empty field instead. Clicks fall
           // through to the input beneath it.
