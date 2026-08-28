@@ -81,7 +81,7 @@ describe('reading the other way round', () => {
 
     fireEvent.change(screen.getByLabelText(/reading for 私/i), { target: { value: 'watashi' } });
     act(() => {
-      jest.advanceTimersByTime(1000);
+      jest.advanceTimersByTime(300); // typing hands off faster than clicking does
     });
 
     // The one field follows the passage to the next word.

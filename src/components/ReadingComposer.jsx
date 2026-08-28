@@ -80,9 +80,34 @@ function ReadingComposer({ kanji, value, reading, onValueChange, onOffer, onStep
         {kanji}
       </Typography>
 
-      <Box
-        component='input'
-        ref={inputRef}
+      <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+        {value === '' && (
+          // A placeholder attribute is a plain string and can carry no ruby, so
+          // the prompt is drawn over the empty field instead. Clicks fall
+          // through to the input beneath it.
+          <Typography
+            component='ruby'
+            aria-hidden='true'
+            sx={{
+              position: 'absolute',
+              top: 0,
+              lineHeight: 1,
+              py: 0.5,
+              fontSize: '1.35rem',
+              color: 'text.secondary',
+              opacity: 0.45,
+              pointerEvents: 'none',
+              rubyPosition: 'over',
+            }}
+          >
+            読み方
+            <Box component='rt' sx={{ fontSize: '0.4em' }}>よみかた</Box>
+          </Typography>
+        )}
+
+        <Box
+          component='input'
+          ref={inputRef}
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
@@ -110,20 +135,10 @@ function ReadingComposer({ kanji, value, reading, onValueChange, onOffer, onStep
           outline: 'none',
           background: 'transparent',
           py: 0.5,
-          '&:focus': { borderColor: 'text.secondary' },
-          '&::placeholder': { color: 'text.secondary', opacity: 0.5 },
-        }}
-      />
-
-      <Typography
-        component='ruby'
-        variant='caption'
-        color='text.secondary'
-        sx={{ rubyPosition: 'over', opacity: 0.7 }}
-      >
-        読み方
-        <Box component='rt' sx={{ fontSize: '0.7em' }}>よみかた</Box>
-      </Typography>
+            '&:focus': { borderColor: 'text.secondary' },
+          }}
+        />
+      </Box>
 
       {debugEnabled() && (
         <Typography variant='caption' color='text.secondary' data-testid='type-debug'>

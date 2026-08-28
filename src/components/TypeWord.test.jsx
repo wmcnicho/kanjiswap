@@ -68,3 +68,31 @@ test('gives a word answered in an earlier visit its reading, faded out', () => {
   expect(screen.getByTestId('reading-slot')).toHaveTextContent('わたし');
   expect(screen.getByTestId('reading-slot')).toHaveStyle({ opacity: '0' });
 });
+
+test('answers the keystroke that finished the word, not a moment later', () => {
+  const ref = createRef();
+  render(<TypeWord {...word} ref={ref} active />);
+
+  act(() => {
+    ref.current.choose('わたし');
+  });
+
+  // Green immediately, before any timer runs: the flash is the response.
+  expect(screen.getByText('私')).toHaveStyle({ color: 'green' });
+});
+
+test('clears the reading quickly, so it fades while the next word is typed', () => {
+  const ref = createRef();
+  render(<TypeWord {...word} ref={ref} active />);
+
+  act(() => {
+    ref.current.choose('わたし');
+    jest.advanceTimersByTime(250);
+  });
+  expect(screen.getByTestId('reading-slot')).toHaveStyle({ opacity: '1' });
+
+  act(() => {
+    jest.advanceTimersByTime(1000);
+  });
+  expect(screen.getByTestId('reading-slot')).toHaveStyle({ opacity: '0' });
+});

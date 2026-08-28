@@ -146,9 +146,17 @@ describe('with a Japanese IME', () => {
   });
 });
 
-test('names the field in Japanese, with furigana', () => {
+test('prompts in the empty field, in kanji with its furigana', () => {
   render(<Field />);
-  const label = screen.getByText('読み方');
-  expect(label).toBeInTheDocument();
-  expect(label).toHaveTextContent('よみかた'); // the ruby annotation rides along
+  const prompt = screen.getByText('読み方');
+  expect(prompt).toHaveTextContent('よみかた'); // the ruby annotation rides along
+});
+
+test('the prompt gives way as soon as anything is typed', () => {
+  render(<Field />);
+
+  fireEvent.change(field(), { target: { value: 'i' } });
+
+  // It stands in for a placeholder, so it behaves like one.
+  expect(screen.queryByText('読み方')).not.toBeInTheDocument();
 });

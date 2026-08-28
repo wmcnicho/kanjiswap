@@ -1,9 +1,13 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 
-const FLASH_MS = 500;          // How long the word colours before it settles
-const FURIGANA_HOLD_MS = 2200; // How long the reading stays once it's right
-const FURIGANA_FADE_MS = 900;
+// Typing is a faster loop than clicking a choice: the answer arrives on the
+// keystroke that completes it, and the next word should be ready by the time
+// the reader's hands have caught up. So the green is brief and the reading
+// clears quickly — it carries on fading while the next word is being typed.
+const FLASH_MS = 200;          // How long the word colours before it settles
+const FURIGANA_HOLD_MS = 900;  // How long the reading stays once it's right
+const FURIGANA_FADE_MS = 500;
 
 // A word in the reading direction: the kanji, with whatever is being typed
 // shown small above it, where its furigana belongs.

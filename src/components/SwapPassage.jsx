@@ -9,6 +9,9 @@ import { wordKey } from '../utils/progress';
 
 // Long enough for the green flash to register before the next word opens.
 const ADVANCE_MS = 620;
+// Typing needs a much shorter one: the reader is mid-flow with their hands on
+// the keys, and 600ms of nothing between words reads as the app hesitating.
+const TYPED_ADVANCE_MS = 220;
 
 // A new passage shows its first word's choices on its own, once the reader has
 // had a moment to look at the text. Any move — hovering, tapping, a key —
@@ -129,7 +132,10 @@ function SwapPassage({
       // Carry on to the next word so play keeps its rhythm; a wrong guess stays
       // put, because the word hasn't been answered yet.
       clearTimeout(advance.current);
-      advance.current = setTimeout(() => setChosenKey(nextAfter(segment.key)), ADVANCE_MS);
+      advance.current = setTimeout(
+        () => setChosenKey(nextAfter(segment.key)),
+        typing ? TYPED_ADVANCE_MS : ADVANCE_MS
+      );
     }
   };
 
